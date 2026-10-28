@@ -47,6 +47,7 @@ static uint32_t s_drop_cnt;
 
 #if defined(CONFIG_AHT20_ENABLE) && CONFIG_AHT20_ENABLE
 static bool s_aht20_ready;
+static bool s_aht20_disabled; /* permanent: no sensor — stop probing I2C (protects GT911) */
 static int s_indoor_cached = 999999;
 static int s_rh_cached = 999999;
 static volatile float s_indoor_lvgl_pending_c;
@@ -107,7 +108,7 @@ static TickType_t ui_bg_aht20_wait_ticks(void)
 
 static void ui_bg_aht20_ensure_init(void)
 {
-    if (s_aht20_ready) {
+    if (s_aht20_ready || s_aht20_disabled) {
         return;
     }
     i2c_master_bus_handle_t bus = board_i2c_get_handle();
@@ -130,10 +131,25 @@ static void ui_bg_aht20_ensure_init(void)
         return;
     }
 
-    const uint32_t retry_ms = ui_bg_aht20_retry_ms(s_aht20_fail_streak);
     if (s_aht20_fail_streak < 255) {
         s_aht20_fail_streak++;
     }
+
+    /*
+     * NOT_FOUND = no ACK at 0x38. Repeated probes on the shared I2C bus can
+     * disturb GT911 touch (same bus). After 3 misses, stop forever this boot.
+     */
+    if (err == ESP_ERR_NOT_FOUND && s_aht20_fail_streak >= 3) {
+        s_aht20_disabled = true;
+        ESP_LOGW(TAG,
+                 "AHT20 not present (0x%02X) — sensor poll disabled "
+                 "(avoids I2C clash with GT911). Re-enable: fit sensor or "
+                 "menuconfig unset AHT20_ENABLE.",
+                 (unsigned)CONFIG_AHT20_I2C_ADDR);
+        return;
+    }
+
+    const uint32_t retry_ms = ui_bg_aht20_retry_ms(s_aht20_fail_streak);
     ui_bg_aht20_schedule(retry_ms);
 
     if (!s_aht20_absent_logged) {
@@ -148,6 +164,9 @@ static void ui_bg_aht20_ensure_init(void)
 
 static void ui_bg_aht20_poll(void)
 {
+    if (s_aht20_disabled) {
+        return;
+    }
     if (!s_aht20_ready) {
         ui_bg_aht20_ensure_init();
         return;
@@ -218,11 +237,24 @@ static void ui_bg_task(void *arg)
 
     while (1) {
 #if defined(CONFIG_AHT20_ENABLE) && CONFIG_AHT20_ENABLE
-        while (1) {
-            if (xQueueReceive(s_queue, &job, ui_bg_aht20_wait_ticks()) == pdTRUE) {
-                break;
-            }
+        /*
+         * After AHT20 is permanently disabled, wait_ticks() stays 0 and the old
+         * loop busy-spun on CPU1 → IDLE1 TWDT. Block forever on the job queue then.
+         */
+        TickType_t wait = s_aht20_disabled ? portMAX_DELAY : ui_bg_aht20_wait_ticks();
+        if (wait == 0 && !s_aht20_disabled) {
+            /* Due now: poll once, then recompute wait (avoid 0-timeout spin). */
             ui_bg_aht20_poll();
+            wait = s_aht20_disabled ? portMAX_DELAY : ui_bg_aht20_wait_ticks();
+            if (wait == 0) {
+                wait = pdMS_TO_TICKS(50); /* safety floor */
+            }
+        }
+        if (xQueueReceive(s_queue, &job, wait) != pdTRUE) {
+            if (!s_aht20_disabled) {
+                ui_bg_aht20_poll();
+            }
+            continue;
         }
 #else
         if (xQueueReceive(s_queue, &job, portMAX_DELAY) != pdTRUE) {

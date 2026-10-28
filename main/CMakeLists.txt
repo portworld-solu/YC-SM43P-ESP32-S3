@@ -43,8 +43,10 @@ set(MAIN_REQUIRES
         app_health
 )
 
+# --- Open-layer sources by concern ---
 set(MAIN_SRCS
         main.c
+        # Peripherals / bus / system helpers
         app/app_low_power.c
         app/ui_assets_warm.c
         app/app_beep.c
@@ -52,12 +54,19 @@ set(MAIN_SRCS
         app/app_gpio_out.c
         app/app_wifi_util.c
         app/app_rs485.c
+        app/app_rs485_bench.c
         app/app_modbus_rtu.c
+        app/app_modbus_map.c
+        app/app_bus_bridge.c
+        # Board sensors (customer-editable calib)
         board/aht20.c
+        # Background I/O (AHT20 poll, NVS) — keeps LVGL task free
         gui/ui_bg_task.c
+        # Fonts
         "fonts/lv_font_source_han_14_cjk3500.c"
         "fonts/lv_font_source_han_ambient_time_150.c"
         "fonts/lv_font_source_han_screen1_time_100.c"
+        "fonts/lv_font_hub_cjk_extra.c"
 )
 
 set(MAIN_INCLUDE_DIRS
@@ -72,21 +81,24 @@ if(NOT UI_THEME_IS_HUB)
     message(FATAL_ERROR "Customer SDK ships hub themes only. Set APP_UI_THEME_* hub id.")
 endif()
 
+# Hub UI: physical layout under hub_ui/{core,pages,features,stubs}
+# Include dirs keep historical #include "hub_xxx.h" working.
 list(APPEND MAIN_SRCS
-        hub_ui/hub_ui.c
-        hub_ui/hub_shell.c
-        hub_ui/hub_nav.c
-        hub_ui/hub_font.c
-        hub_ui/hub_icons.c
-        hub_ui/hub_room_ui.c
-        hub_ui/hub_device_ui.c
-        hub_ui/hub_pages_common.c
-        hub_ui/hub_pages_life.c
-        hub_ui/hub_i18n.c
-        hub_ui/hub_standby.c
-        hub_ui/ui_runtime_stubs.c
-        # ui_* Wi-Fi hooks are inside cloud_wifi.a; bt_switch keep is in ui_runtime_stubs.c
-        "fonts/lv_font_hub_cjk_extra.c"
+        hub_ui/core/hub_ui.c
+        hub_ui/core/hub_shell.c
+        hub_ui/core/hub_nav.c
+        hub_ui/core/hub_font.c
+        hub_ui/core/hub_icons.c
+        hub_ui/core/hub_i18n.c
+        hub_ui/pages/hub_room_ui.c
+        hub_ui/pages/hub_device_ui.c
+        hub_ui/pages/hub_pages_common.c
+        hub_ui/pages/hub_pages_life.c
+        hub_ui/pages/hub_standby.c
+        hub_ui/features/hub_climate_offset.c
+        hub_ui/stubs/ui_runtime_stubs.c
+        # ui_compat / wifi_ui_font stubs live in cloud_wifi (same .a as refs; see that CMakeLists)
+        # Active theme pack (self-contained pages)
         "${UI_DIR}/palette.c"
         "${UI_DIR}/theme_local.c"
         "${UI_DIR}/home.c"
@@ -99,7 +111,14 @@ list(APPEND MAIN_SRCS
 if(CONFIG_APP_USE_SPIFFS_UI_ASSETS)
     list(APPEND MAIN_SRCS "app/app_spiffs.c")
 endif()
-list(APPEND MAIN_INCLUDE_DIRS hub_ui "${UI_DIR}")
+list(APPEND MAIN_INCLUDE_DIRS
+        hub_ui
+        hub_ui/core
+        hub_ui/pages
+        hub_ui/features
+        hub_ui/stubs
+        "${UI_DIR}"
+)
 
 idf_component_register(
     SRCS ${MAIN_SRCS}

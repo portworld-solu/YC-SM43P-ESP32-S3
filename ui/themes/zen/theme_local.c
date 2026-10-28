@@ -91,7 +91,7 @@ void quickbar(lv_obj_t *par)
     lv_obj_t *bar = lv_obj_create(par);
     lv_obj_remove_style_all(bar);
     lv_obj_set_width(bar, LV_PCT(100));
-    lv_obj_set_height(bar, 40);
+    lv_obj_set_height(bar, 48);
     lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(bar, 4, 0);
 

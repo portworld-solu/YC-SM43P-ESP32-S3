@@ -7,6 +7,7 @@
 #include "hub_icons.h"
 #include "hub_i18n.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,11 +39,34 @@ void build_home(lv_obj_t *parent)
     lv_obj_set_flex_flow(hl, LV_FLEX_FLOW_COLUMN);
     lbl(hl, "DUSK", p->violet, hub_font());
     hub_clock_label(hl, p->t1, hub_font_clock_lg());
-    char clim[40];
-    snprintf(clim, sizeof(clim), hub_tr("室内 %.1f° · RH %d%%", "Indoor %.1f° · RH %d%%"),
-             (double)m->indoor_c, m->rh);
-    lbl(hl, clim, p->t3, hub_font());
-    lv_obj_t *sec = lv_btn_create(head);
+    {
+        const bool clim_ok = hub_climate_ui_available();
+        char clim[40];
+        if (clim_ok) {
+            snprintf(clim, sizeof(clim), hub_tr("室内 %.1f° · RH %d%%", "Indoor %.1f° · RH %d%%"),
+                     (double)hub_climate_display_temp_c(), hub_climate_display_rh());
+        } else {
+            snprintf(clim, sizeof(clim), "%s", hub_tr("室内 --° · RH --%", "Indoor --° · RH --%"));
+        }
+        lv_obj_t *clim_btn = lv_btn_create(hl);
+        lv_obj_remove_style_all(clim_btn);
+        lv_obj_set_width(clim_btn, LV_SIZE_CONTENT);
+        lv_obj_add_event_cb(clim_btn, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+        lbl(clim_btn, clim, clim_ok ? p->t1 : p->t3, hub_font());
+    }
+    lv_obj_t *right = lv_obj_create(head);
+    lv_obj_remove_style_all(right);
+    lv_obj_set_size(right, LV_SIZE_CONTENT, LV_PCT(100));
+    lv_obj_set_flex_flow(right, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(right, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(right, 8, 0);
+    lv_obj_t *wifi = lv_btn_create(right);
+    lv_obj_remove_style_all(wifi);
+    lv_obj_set_size(wifi, 40, 40);
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
+    hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->violet, 18);
+    lv_obj_center(lv_obj_get_child(wifi, 0));
+    lv_obj_t *sec = lv_btn_create(right);
     lv_obj_remove_style_all(sec);
     hub_apply_card(sec, m->armed);
     theme_card_chrome(sec, m->armed);

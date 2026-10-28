@@ -1,11 +1,11 @@
-# UI theme packs (LVGL 8) 鈥?Customer SDK
+# UI theme packs (LVGL 8) — Customer SDK
 
-Compile-time hub themes live under `themes/`. SquareLine `default` is **not** shipped.
+Compile-time Hub themes live under `themes/`. The SquareLine `default` pack is **not** shipped.
 
-| Pack | Path |
-|------|------|
-| slate 鈥?metro | `themes/<id>/` |
+| Item | Path / action |
+|------|----------------|
+| Theme packs | `themes/<id>/` (slate, sand, ink, …) |
+| Select theme | Edit `APP_UI_THEME_ID` in `main/app_ui_theme_select.h`, then `idf.py reconfigure && idf.py build` |
+| Icons | `../spiffs_image/icons/nt/*.png` (flash the **storage** partition) |
 
-**閫夊瀷锛?* 缂栬緫 `main/app_ui_theme_select.h` 鐨?`APP_UI_THEME_ID`锛堝 `APP_UI_THEME_SLATE`锛夛紝鍐?`idf.py reconfigure && idf.py build`銆?
-
-Board pins are embedded in closed `board_bsp.a` (not published as source).
+Board pins and panel timing are open source under `components/board_bsp/` — see [docs/BOARD_PINOUT.md](../docs/BOARD_PINOUT.md).

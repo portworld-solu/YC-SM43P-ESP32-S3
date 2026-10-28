@@ -6,6 +6,7 @@
 #include "hub_model.h"
 #include "hub_icons.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,9 +34,10 @@ void build_home(lv_obj_t *parent)
     lv_obj_set_flex_align(head, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     hub_clock_label(head, p->accent, hub_font());
     lbl(head, "PULSE // NODE", p->t2, hub_font());
-    char link[16];
-    snprintf(link, sizeof(link), "LINK %d/%d", hub_model_ok_count(), HUB_PROTO_COUNT);
-    lbl(head, link, p->on, hub_font());
+    lv_obj_t *wifi = lv_btn_create(head);
+    lv_obj_remove_style_all(wifi);
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
+    hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->accent, 18);
 
     lv_obj_t *hud = lv_obj_create(root);
     lv_obj_remove_style_all(hud);
@@ -44,43 +46,30 @@ void build_home(lv_obj_t *parent)
     lv_obj_set_flex_flow(hud, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(hud, 8, 0);
 
-    lv_obj_t *pwr = lv_btn_create(hud);
-    lv_obj_remove_style_all(pwr);
-    hub_apply_card(pwr, false);
-    theme_card_chrome(pwr, false);
-    hub_hud_bevel(pwr, p->accent);
-    lv_obj_set_flex_grow(pwr, 12);
-    lv_obj_set_height(pwr, LV_PCT(100));
-    lv_obj_add_event_cb(pwr, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_ENERGY);
-    lbl(pwr, "PWR_DRAW", p->accent, hub_font());
-    lv_obj_align(lv_obj_get_child(pwr, 0), LV_ALIGN_TOP_LEFT, 8, 8);
+    lv_obj_t *clim = lv_btn_create(hud);
+    lv_obj_remove_style_all(clim);
+    hub_apply_card(clim, false);
+    theme_card_chrome(clim, false);
+    hub_hud_bevel(clim, p->accent);
+    lv_obj_set_flex_grow(clim, 12);
+    lv_obj_set_height(clim, LV_PCT(100));
+    lv_obj_add_event_cb(clim, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+    lbl(clim, "CLIMATE", p->accent, hub_font());
+    lv_obj_align(lv_obj_get_child(clim, 0), LV_ALIGN_TOP_LEFT, 8, 8);
+    const bool clim_ok = hub_climate_ui_available();
     char pb[24];
-    snprintf(pb, sizeof(pb), "%.2f  %.0f°/%d%%", (double)m->power_kw, (double)m->indoor_c, m->rh);
-    lv_obj_t *pv = lv_label_create(pwr);
+    if (clim_ok) {
+        snprintf(pb, sizeof(pb), "%.1f°  %d%%", (double)hub_climate_display_temp_c(),
+                 hub_climate_display_rh());
+    } else {
+        snprintf(pb, sizeof(pb), "--°  --%%");
+    }
+    lv_obj_t *pv = lv_label_create(clim);
     lv_label_set_text(pv, pb);
-    hub_style_label(pv, p->accent, hub_font_clock());
+    hub_style_label(pv, clim_ok ? p->accent : p->t3, hub_font_clock());
     lv_obj_align(pv, LV_ALIGN_LEFT_MID, 8, 4);
-    lbl(pwr, "kW · T/RH", p->t3, hub_font());
-    lv_obj_align(lv_obj_get_child(pwr, 2), LV_ALIGN_LEFT_MID, 8, 28);
-    lv_obj_t *bar_bg = lv_obj_create(pwr);
-    lv_obj_remove_style_all(bar_bg);
-    lv_obj_set_size(bar_bg, LV_PCT(90), 4);
-    lv_obj_align(bar_bg, LV_ALIGN_BOTTOM_LEFT, 8, -10);
-    lv_obj_set_style_bg_color(bar_bg, p->accent, 0);
-    lv_obj_set_style_bg_opa(bar_bg, LV_OPA_20, 0);
-    lv_obj_t *bar_fg = lv_obj_create(bar_bg);
-    lv_obj_remove_style_all(bar_fg);
-    int pct = (int)(m->power_kw * 28.0f);
-    if (pct > 100) {
-        pct = 100;
-    }
-    if (pct < 8) {
-        pct = 8;
-    }
-    lv_obj_set_size(bar_fg, LV_PCT(pct), 4);
-    lv_obj_set_style_bg_color(bar_fg, p->accent, 0);
-    lv_obj_set_style_bg_opa(bar_fg, LV_OPA_COVER, 0);
-    lv_obj_align(bar_fg, LV_ALIGN_LEFT_MID, 0, 0);
+    lbl(clim, "T/RH · CAL", p->t3, hub_font());
+    lv_obj_align(lv_obj_get_child(clim, 2), LV_ALIGN_BOTTOM_LEFT, 8, -10);
 
     lv_obj_t *bus = lv_btn_create(hud);
     lv_obj_remove_style_all(bus);

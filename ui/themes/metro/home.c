@@ -7,6 +7,7 @@
 #include "hub_icons.h"
 #include "hub_i18n.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,10 +34,10 @@ void build_home(lv_obj_t *parent)
     lv_obj_set_flex_align(head, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     hub_clock_label(head, p->t1, hub_font());
     lbl(head, "Metro Hub", p->t1, hub_font());
-    lv_obj_t *set = lv_btn_create(head);
-    lv_obj_remove_style_all(set);
-    lv_obj_add_event_cb(set, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SETTINGS);
-    lbl(set, hub_tr("设置", "Settings"), p->t2, hub_font());
+    lv_obj_t *wifi = lv_btn_create(head);
+    lv_obj_remove_style_all(wifi);
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
+    hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->accent, 18);
 
     lv_obj_t *grid = lv_obj_create(root);
     lv_obj_remove_style_all(grid);
@@ -48,21 +49,27 @@ void build_home(lv_obj_t *parent)
     static lv_coord_t cols[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
     static lv_coord_t rows[] = { LV_GRID_FR(125), LV_GRID_FR(100), LV_GRID_FR(100), LV_GRID_TEMPLATE_LAST };
     lv_obj_set_grid_dsc_array(grid, cols, rows);
-    char sub0[16], sub1[16], sub_e[16], sub_b[16];
+    char sub0[16], sub1[16], sub_net[16], sub_b[16];
     snprintf(sub0, sizeof(sub0), "%s",
              hub_model_room_active(0) ? hub_tr("运行", "Active") : hub_tr("待机", "Idle"));
     snprintf(sub1, sizeof(sub1), "%s",
              hub_model_room_active(1) ? hub_tr("运行", "Active") : hub_tr("待机", "Idle"));
     char sub_clim[24];
-    snprintf(sub_e, sizeof(sub_e), "%.1f kW", (double)m->power_kw);
+    snprintf(sub_net, sizeof(sub_net), "%s", m->protos[3].ok ? "ON" : "OFF");
     snprintf(sub_b, sizeof(sub_b), "%d/%d", hub_model_ok_count(), HUB_PROTO_COUNT);
-    snprintf(sub_clim, sizeof(sub_clim), "%.0f°/%d%%", (double)m->indoor_c, m->rh);
+    const bool clim_ok = hub_climate_ui_available();
+    if (clim_ok) {
+        snprintf(sub_clim, sizeof(sub_clim), "%.0f°/%d%%", (double)hub_climate_display_temp_c(),
+                 hub_climate_display_rh());
+    } else {
+        snprintf(sub_clim, sizeof(sub_clim), "--°/--%%");
+    }
     const char *labels[] = {
         hub_model_room_name(0), hub_model_room_name(1), hub_model_room_name(2),
-        hub_tr("情景", "Scenes"), hub_tr("总线", "Gateway"), hub_tr("能耗", "Energy"),
+        hub_tr("情景", "Scenes"), hub_tr("总线", "Gateway"), hub_tr("网络", "Network"),
         hub_tr("气候", "Climate"),
     };
-    const char *subs[] = {sub0, sub1, "4 pts", hub_model_scene_label(m->active_scene), sub_b, sub_e,
+    const char *subs[] = {sub0, sub1, "4 pts", hub_model_scene_label(m->active_scene), sub_b, sub_net,
                           sub_clim};
     lv_color_t colors[] = {
         LV_COLOR_MAKE(0x00, 0xbc, 0xf2), LV_COLOR_MAKE(0x87, 0x64, 0xb8), LV_COLOR_MAKE(0x10, 0x7c, 0x10),
@@ -75,7 +82,7 @@ void build_home(lv_obj_t *parent)
     int rooms[] = {0, 1, 2, -1, -1, -1, -1};
     hub_route_t routes[] = {
         HUB_ROUTE_ROOM, HUB_ROUTE_ROOM, HUB_ROUTE_ROOM, HUB_ROUTE_SCENES,
-        HUB_ROUTE_GATEWAY, HUB_ROUTE_ENERGY, HUB_ROUTE_HVAC,
+        HUB_ROUTE_GATEWAY, HUB_ROUTE_NETWORK, HUB_ROUTE_SENSOR_CAL,
     };
     for (int i = 0; i < 7; i++) {
         lv_obj_t *b = lv_btn_create(grid);

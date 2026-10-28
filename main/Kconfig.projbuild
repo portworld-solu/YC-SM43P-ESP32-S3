@@ -1,4 +1,4 @@
-# Customer SDK application Kconfig (no vendor GPIO pin map - pins live in board_bsp.a).
+# Customer SDK application Kconfig (open-source board pin map included).
 
 # Safety stubs if component-manager still evaluates LVGL9 optional codec rules.
 menu "LVGL9 codec stubs (keep off on LVGL 8.4)"
@@ -18,6 +18,175 @@ menu "LVGL9 codec stubs (keep off on LVGL 8.4)"
     config LV_USE_LZ4_INTERNAL
         bool "Stub: LV_USE_LZ4_INTERNAL (LVGL9 only)"
         default n
+
+endmenu
+
+menu "Board: RGB LCD pin mapping"
+
+    comment "RGB data lines (DATA0=LSB). Defaults: B1-B5,G0-G5,R1-R5"
+    comment "DATA0-4=B(5,45,48,47,21) DATA5-10=G(14,13,12,11,10,9)"
+    comment "DATA11-15=R(46,3,8,18,17)"
+
+    config BOARD_LCD_DATA0_GPIO
+        int "DATA0 GPIO (B1)"
+        default 5
+        range 0 48
+    config BOARD_LCD_DATA1_GPIO
+        int "DATA1 GPIO (B2)"
+        default 45
+        range 0 48
+    config BOARD_LCD_DATA2_GPIO
+        int "DATA2 GPIO (B3)"
+        default 48
+        range 0 48
+    config BOARD_LCD_DATA3_GPIO
+        int "DATA3 GPIO (B4)"
+        default 47
+        range 0 48
+    config BOARD_LCD_DATA4_GPIO
+        int "DATA4 GPIO (B5)"
+        default 21
+        range 0 48
+    config BOARD_LCD_DATA5_GPIO
+        int "DATA5 GPIO (G0)"
+        default 14
+        range 0 48
+    config BOARD_LCD_DATA6_GPIO
+        int "DATA6 GPIO (G1)"
+        default 13
+        range 0 48
+    config BOARD_LCD_DATA7_GPIO
+        int "DATA7 GPIO (G2)"
+        default 12
+        range 0 48
+    config BOARD_LCD_DATA8_GPIO
+        int "DATA8 GPIO (G3)"
+        default 11
+        range 0 48
+    config BOARD_LCD_DATA9_GPIO
+        int "DATA9 GPIO (G4)"
+        default 10
+        range 0 48
+    config BOARD_LCD_DATA10_GPIO
+        int "DATA10 GPIO (G5)"
+        default 9
+        range 0 48
+    config BOARD_LCD_DATA11_GPIO
+        int "DATA11 GPIO (R1)"
+        default 46
+        range 0 48
+    config BOARD_LCD_DATA12_GPIO
+        int "DATA12 GPIO (R2)"
+        default 3
+        range 0 48
+    config BOARD_LCD_DATA13_GPIO
+        int "DATA13 GPIO (R3)"
+        default 8
+        range 0 48
+    config BOARD_LCD_DATA14_GPIO
+        int "DATA14 GPIO (R4)"
+        default 18
+        range 0 48
+    config BOARD_LCD_DATA15_GPIO
+        int "DATA15 GPIO (R5)"
+        default 17
+        range 0 48
+
+    comment "RGB sync / control signals"
+
+    config BOARD_LCD_VSYNC_GPIO
+        int "VSYNC GPIO"
+        default 39
+        range 0 48
+    config BOARD_LCD_HSYNC_GPIO
+        int "HSYNC GPIO"
+        default 38
+        range 0 48
+    config BOARD_LCD_DE_GPIO
+        int "DE GPIO"
+        default 40
+        range 0 48
+    config BOARD_LCD_PCLK_GPIO
+        int "PCLK GPIO"
+        default 41
+        range 0 48
+
+    config BOARD_LCD_DISP_GPIO
+        int "DISP/LCD_EN GPIO (-1 = not used)"
+        default -1
+        range -1 48
+
+endmenu
+
+menu "Board: CH390 SPI Ethernet"
+
+    config BOARD_ETH_CH390_ENABLE
+        bool "Enable WCH CH390 Ethernet (SPI)"
+        default y
+
+    choice BOARD_ETH_CH390_SPI_HOST_CHOICE
+        prompt "SPI peripheral"
+        depends on BOARD_ETH_CH390_ENABLE
+        default BOARD_ETH_CH390_SPI_HOST_SPI3
+
+        config BOARD_ETH_CH390_SPI_HOST_SPI2
+            bool "SPI2_HOST"
+
+        config BOARD_ETH_CH390_SPI_HOST_SPI3
+            bool "SPI3_HOST"
+    endchoice
+
+    config BOARD_ETH_CH390_SPI_MISO_PIN
+        int "SPI MISO GPIO (-1 = skip init)"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 1
+        range -1 48
+
+    config BOARD_ETH_CH390_SPI_MOSI_PIN
+        int "SPI MOSI GPIO (-1 = skip init)"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 2
+        range -1 48
+
+    config BOARD_ETH_CH390_SPI_SCLK_PIN
+        int "SPI SCLK GPIO (-1 = skip init)"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 42
+        range -1 48
+
+    config BOARD_ETH_CH390_CS_VIA_IO_EXPANDER
+        bool "CH390 SPI CS on NCA9555 (see BOARD_IO_EXP_CH390_CS)"
+        depends on BOARD_ETH_CH390_ENABLE && BOARD_IO_EXPANDER_ENABLE
+        default y
+
+    config BOARD_ETH_CH390_SPI_CS_PIN
+        int "SPI CS GPIO (-1 = use expander or skip)"
+        depends on BOARD_ETH_CH390_ENABLE && !BOARD_ETH_CH390_CS_VIA_IO_EXPANDER
+        default -1
+        range -1 48
+
+    config BOARD_ETH_CH390_RST_VIA_IO_EXPANDER
+        bool "CH390 reset on NCA9555 (see BOARD_IO_EXP_CH390_RST)"
+        depends on BOARD_ETH_CH390_ENABLE && BOARD_IO_EXPANDER_ENABLE
+        default y
+
+    config BOARD_ETH_CH390_INT_PIN
+        int "CH390 INT GPIO (-1 = polling mode)"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 6
+        range -1 48
+
+    config BOARD_ETH_CH390_POLL_PERIOD_MS
+        int "RX poll period (ms) when INT GPIO = -1"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 20
+        range 1 500
+
+    config BOARD_ETH_CH390_SPI_CLOCK_MHZ
+        int "SPI clock (MHz)"
+        depends on BOARD_ETH_CH390_ENABLE
+        default 20
+        range 1 40
 
 endmenu
 
@@ -52,6 +221,26 @@ menu "App features"
         default y
         depends on APP_FEATURE_BLE
 
+    config HUB_UI_ENGINEER_EDIT
+        bool "Room-edit UI: Type picker + Modbus (MB) editors"
+        default n
+        help
+            Default off for customer / sales builds:
+              - Widget types & Modbus bindings come from code
+                (main/app/app_modbus_map_config.h + hub_model factory).
+              - Room-edit page only toggles show/hide; no Type / MB UI.
+            Enable for SDK bring-up / SI who need on-screen point-map edits.
+
+    config APP_MODBUS_MAP_PERSIST_NVS
+        bool "Persist Modbus map to NVS (overrides compile seed)"
+        default y if HUB_UI_ENGINEER_EDIT
+        default n
+        help
+            When disabled (default without engineer edit), every boot loads
+            the compile-time seed from app_modbus_map_config.h and ignores
+            any previous on-screen / NVS edits. Enable together with
+            HUB_UI_ENGINEER_EDIT so field MB changes survive reboot.
+
 endmenu
 
 menu "Secondary-dev peripherals (open APIs)"
@@ -72,6 +261,18 @@ menu "Secondary-dev peripherals (open APIs)"
         help
             Off by default because product sdkconfig often keeps UART0 as console.
             Enable after freeing UART0 (USB-JTAG console) or after changing pins.
+
+    config APP_RS485_BENCH_MODE
+        bool "RS485 test-bench: quiet other logs + TX/RX hex dump"
+        depends on APP_ENABLE_RS485
+        default n
+        help
+            For bring-up on a test bench:
+            - Lower Wi-Fi / MQTT / health / GUI log noise
+            - Log every Modbus/RS485 TX and RX as hex (tag rs485_hex)
+            - Disable background Modbus poll (only show intentional writes)
+            Pair with console = USB Serial/JTAG so UART0 (GPIO43/44) is
+            exclusive for RS485 and is not polluted by console traffic.
 
 endmenu
 

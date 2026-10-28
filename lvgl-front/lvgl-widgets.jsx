@@ -105,16 +105,21 @@ function OnOffWidget({ name = "Relay", room = "", hue, icon, on: onProp = true, 
       </div>
     );
   }
+  /* Parity with hub_room_ui Switch: top(badge|pwr) → spacer → name|ON/OFF */
   return (
     <div className={"w" + (compact ? " w-compact" : "")} data-on={on ? "1" : "0"} style={{ height: "100%", cursor: "pointer" }} onClick={toggle}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Badge icon={ic} hue={H} on={on} size={compact ? 32 : 42} />
         <PowerBtn on={on} hue={H} onClick={toggle} size={compact ? 30 : 38} />
       </div>
       <div style={{ flex: 1, minHeight: 0 }} />
-      <div className="w-title" style={{ fontSize: compact ? 13 : 16, fontWeight: 700 }}>{name}</div>
-      <div className="w-sub" style={{ fontSize: compact ? 11 : 12, color: on ? H : "var(--t3)", marginTop: 2, fontWeight: 600 }}>
-        {room ? `${room} · ` : ""}{on ? "ON" : "OFF"}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+        <div className="w-title" style={{ fontSize: compact ? 13 : 16, fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {name}
+        </div>
+        <div className="w-sub" style={{ fontSize: compact ? 11 : 12, color: on ? H : "var(--t3)", fontWeight: 600, flexShrink: 0 }}>
+          {on ? "ON" : "OFF"}
+        </div>
       </div>
     </div>
   );

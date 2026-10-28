@@ -4,6 +4,7 @@
 
 #include "app_coexist.h"
 #include "app_gpio_out.h"
+#include "app_rs485_bench.h"
 #include "driver/gpio.h"
 #include "esp_check.h"
 #include "esp_log.h"
@@ -144,6 +145,9 @@ esp_err_t app_rs485_write(const uint8_t *data, size_t len, uint32_t timeout_ms)
 
     app_coexist_before_rs485_burst();
 
+    /* Drop stale RX (console echo / bus noise) before a clean half-duplex burst */
+    (void)uart_flush_input(s_cfg.uart_num);
+
     esp_err_t err = app_rs485_de(true);
     if (err != ESP_OK) {
         app_coexist_after_rs485_burst();
@@ -154,6 +158,7 @@ esp_err_t app_rs485_write(const uint8_t *data, size_t len, uint32_t timeout_ms)
     }
     vTaskDelay(pdMS_TO_TICKS(s_cfg.de_setup_ms));
 
+    app_rs485_bench_hex("TX", data, len);
     int n = uart_write_bytes(s_cfg.uart_num, data, (int)len);
     if (n != (int)len) {
         (void)app_rs485_de(false);
@@ -166,6 +171,8 @@ esp_err_t app_rs485_write(const uint8_t *data, size_t len, uint32_t timeout_ms)
 
     err = uart_wait_tx_done(s_cfg.uart_num, pdMS_TO_TICKS(timeout_ms ? timeout_ms : 800));
     (void)uart_wait_tx_idle_polling(s_cfg.uart_num);
+    /* Flush local TX echo while still driving the bus; then turnaround + DE low */
+    (void)uart_flush_input(s_cfg.uart_num);
     vTaskDelay(pdMS_TO_TICKS(app_rs485_turnaround_ms(len)));
     (void)app_rs485_de(false);
 
@@ -228,6 +235,11 @@ esp_err_t app_rs485_transact(const uint8_t *tx, size_t tx_len,
     }
     if (rx_len != NULL) {
         *rx_len = n;
+    }
+    if (n > 0) {
+        app_rs485_bench_hex("RX", rx, (size_t)n);
+    } else {
+        app_rs485_bench_hex("RX", NULL, 0);
     }
     return ESP_OK;
 }

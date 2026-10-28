@@ -13,6 +13,7 @@ void hub_theme_build(lv_obj_t *parent, hub_route_t route)
     case HUB_ROUTE_HOME: build_home(parent); break;
     case HUB_ROUTE_ROOM: hub_build_room_page(parent); break;
     case HUB_ROUTE_ROOM_EDIT: hub_build_room_edit(parent); break;
+    case HUB_ROUTE_ROOM_MB_EDIT: hub_build_room_mb_edit(parent); break;
     case HUB_ROUTE_APPLIANCES: hub_build_appliances(parent); break;
     case HUB_ROUTE_SCENES: hub_build_scenes(parent); break;
     case HUB_ROUTE_ENERGY: hub_build_energy(parent); break;
@@ -21,6 +22,7 @@ void hub_theme_build(lv_obj_t *parent, hub_route_t route)
     case HUB_ROUTE_NETWORK: hub_build_network(parent); break;
     case HUB_ROUTE_SECURITY: hub_build_security(parent); break;
     case HUB_ROUTE_SCHEDULE: hub_build_schedule(parent); break;
+    case HUB_ROUTE_SENSOR_CAL: hub_build_sensor_cal(parent); break;
     case HUB_ROUTE_HVAC: hub_build_hvac(parent); break;
     case HUB_ROUTE_POINTS: hub_build_points(parent); break;
     case HUB_ROUTE_STANDBY: hub_build_standby(parent); break;

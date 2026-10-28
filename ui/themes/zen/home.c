@@ -7,6 +7,7 @@
 #include "hub_icons.h"
 #include "hub_i18n.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +52,16 @@ void build_home(lv_obj_t *parent)
     lv_obj_add_flag(head, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
     lv_obj_add_flag(clk, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
 
-    lv_obj_t *arm = lv_btn_create(head);
+    lv_obj_t *hr = lv_obj_create(head);
+    lv_obj_remove_style_all(hr);
+    lv_obj_set_flex_flow(hr, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(hr, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
+    lv_obj_set_style_pad_row(hr, 8, 0);
+    lv_obj_t *wifi = lv_btn_create(hr);
+    lv_obj_remove_style_all(wifi);
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
+    hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->t2, 18);
+    lv_obj_t *arm = lv_btn_create(hr);
     lv_obj_remove_style_all(arm);
     lv_obj_add_event_cb(arm, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SECURITY);
     lv_obj_t *al = lv_label_create(arm);
@@ -99,21 +109,34 @@ void build_home(lv_obj_t *parent)
     lv_obj_align(rn, LV_ALIGN_LEFT_MID, 0, 4);
 
     char sub[96];
-    if (d->ac_on) {
+    const bool clim_ok = hub_climate_ui_available();
+    if (d->ac_on && clim_ok) {
         snprintf(sub, sizeof(sub),
                  hub_tr("%s · 设定%d° · 室内%.1f°/%d%%", "%s · Set %d° · Indoor %.1f°/%d%%"),
-                 on ? hub_tr("运行中", "Active") : hub_tr("静音", "Quiet"),
-                 d->ac_sp, (double)m->indoor_c, m->rh);
-    } else {
+                 on ? hub_tr("运行中", "Active") : hub_tr("静音", "Quiet"), d->ac_sp,
+                 (double)hub_climate_display_temp_c(), hub_climate_display_rh());
+    } else if (d->ac_on) {
+        snprintf(sub, sizeof(sub), hub_tr("%s · 设定%d° · 室内--°/--%%", "%s · Set %d° · Indoor --/--"),
+                 on ? hub_tr("运行中", "Active") : hub_tr("静音", "Quiet"), d->ac_sp);
+    } else if (clim_ok) {
         snprintf(sub, sizeof(sub),
-                 hub_tr("%s · 室内%.1f°/%d%% · %.1fkW", "%s · Indoor %.1f°/%d%% · %.1fkW"),
+                 hub_tr("%s · 室内%.1f°/%d%% · 点此校准", "%s · Indoor %.1f°/%d%% · tap to cal"),
                  on ? hub_tr("运行中", "Active") : hub_tr("静音", "Quiet"),
-                 (double)m->indoor_c, m->rh, (double)m->power_kw);
+                 (double)hub_climate_display_temp_c(), hub_climate_display_rh());
+    } else {
+        snprintf(sub, sizeof(sub), hub_tr("%s · 室内--°/--%% · 点此校准", "%s · Indoor --/-- · tap to cal"),
+                 on ? hub_tr("运行中", "Active") : hub_tr("静音", "Quiet"));
     }
-    lv_obj_t *sl = lv_label_create(focus);
+    lv_obj_t *clim_hit = lv_btn_create(focus);
+    lv_obj_remove_style_all(clim_hit);
+    lv_obj_set_width(clim_hit, LV_PCT(100));
+    lv_obj_set_height(clim_hit, 28);
+    lv_obj_align(clim_hit, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_add_event_cb(clim_hit, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+    lv_obj_t *sl = lv_label_create(clim_hit);
     lv_label_set_text(sl, sub);
     hub_style_label(sl, p->t2, hub_font());
-    lv_obj_align(sl, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(sl, LV_ALIGN_LEFT_MID, 0, 0);
 
     lv_obj_t *rule2 = lv_obj_create(body);
     lv_obj_remove_style_all(rule2);

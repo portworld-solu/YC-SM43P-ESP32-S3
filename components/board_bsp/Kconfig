@@ -1,54 +1,194 @@
 menu "Withthewind board: NCA9555 IO expander"
 
     config BOARD_IO_EXPANDER_ENABLE
-        bool "Use NCA9555 / TCA9555 IO expander"
+        bool "Use NCA9555 / TCA9555 IO expander (replaces TCA9554 / CH32V003)"
         default y
+        help
+            Port0: LCD 3-wire SPI, LCD/TP reset, CH390 CS/RST, RTC INT.
+            Port1 P1.0: GPIO_OUT. P1.1: buzzer (new board). Backlight is MCU GPIO4 LEDC.
 
     config BOARD_IO_EXPANDER_I2C_ADDRESS
         hex "IO expander 7-bit I2C address"
         depends on BOARD_IO_EXPANDER_ENABLE
         default 0x20
+        help
+            NCA9555 / TCA9555 with A0–A2 grounded is 0x20.
 
     config BOARD_BACKLIGHT_VIA_IO_EXPANDER
-        bool "Backlight on expander (legacy software PWM)"
+        bool "Backlight on expander (software PWM via I2C)"
         depends on BOARD_IO_EXPANDER_ENABLE
         default n
         help
-            Closed board_bsp.a is built with MCU GPIO4 LEDC. Leave this off.
+            旧板：NCA9555 P1.1 + esp_timer 软件 PWM。I2C bit-bang 会抢触摸/CH390 总线，
+            且低占空比易闪。新板背光改 MCU GPIO LEDC，请关闭此项。
+
+    config BOARD_BACKLIGHT_EXPANDER_PIN
+        int "Backlight expander pin index (0-15)"
+        depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default 9
+        range 0 15
+        help
+            Index 9 = P1.1。仅在「Backlight on expander」开启时有效。
 
     config BOARD_BACKLIGHT_PWM_GPIO_NUM
-        int "Backlight MCU GPIO (LEDC)"
+        int "Backlight MCU GPIO (LEDC hardware PWM)"
         depends on !BOARD_BACKLIGHT_VIA_IO_EXPANDER
         default 4
         range -1 48
+        help
+            ESP32-S3 背光脚。本板 GPIO4 不占用 RGB/SPI/I2C；-1 关闭 MCU PWM。
 
     config BOARD_BACKLIGHT_LEDC_FREQ_HZ
         int "Backlight LEDC PWM frequency (Hz)"
         depends on !BOARD_BACKLIGHT_VIA_IO_EXPANDER
         default 5000
         range 250 20000
+        help
+            硬件 PWM 载波。5kHz 避开可听啸叫，且比扩展器软件 PWM 稳定。
+
+    config BOARD_BACKLIGHT_MAX_DUTY_PERCENT
+        int "Hardware max LEDC duty when UI is 100% (percent of full PWM)"
+        depends on !BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default 78
+        range 10 100
+        help
+            UI 仍显示 0–100%，实际 LEDC 占空比按此上限缩放。
+            例：光强计 100% 时约 512、目标 400 → 400/512≈78%。
+            8-bit 时 78% → duty≈199/255。
+
+    config BOARD_BACKLIGHT_ACTIVE_HIGH
+        bool "Backlight ON when pin is high"
+        depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default y
+
+    config BOARD_BACKLIGHT_INVERT_PERCENT
+        bool "Invert UI brightness percent (legacy CH32 curve)"
+        depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default n
+        help
+            旧板 CH32V003 PWM 曲线是反的（100-percent）。新板高电平直接亮，关闭此项。
+
+    config BOARD_BACKLIGHT_EXPANDER_PWM_FREQ_HZ
+        int "Expander backlight software PWM frequency (Hz)"
+        depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default 1000
+        range 200 2000
+        help
+            仅扩展器软件 PWM 使用。MCU LEDC 路径请用 BOARD_BACKLIGHT_LEDC_FREQ_HZ。
 
     config BOARD_BACKLIGHT_MIN_PERCENT
-        int "Minimum applied backlight when ON (percent)"
+        int "Minimum applied backlight when ON (percent, 0=off still allowed)"
         default 10
         range 1 90
+        help
+            非 0 亮度下限。扩展器软件 PWM 建议 ≥50 防闪；MCU LEDC 可用 10。
+
+    config BOARD_BACKLIGHT_PWM_BAND_STEP_PCT
+        int "Brightness PWM band step (percent, must divide 100)"
+        depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BACKLIGHT_VIA_IO_EXPANDER
+        default 20
+        range 5 25
+        help
+            仅 I2C 软件 PWM 需要离散档。MCU LEDC 按 1%% 连续调光。
 
     config BOARD_BEEP_VIA_IO_EXPANDER
         bool "Buzzer on IO expander pin"
         depends on BOARD_IO_EXPANDER_ENABLE
         default y
+        help
+            新板蜂鸣器在 NCA9555 P1.1（原 LCD_PWM 脚）。关闭则用 MCU GPIO。
 
     config BOARD_BEEP_EXPANDER_PIN
         int "Buzzer expander pin index (0-15)"
         depends on BOARD_IO_EXPANDER_ENABLE && BOARD_BEEP_VIA_IO_EXPANDER
         default 9
         range 0 15
+        help
+            Index 9 = P1.1。
+
+    config BOARD_BEEP_GPIO_NUM
+        int "Buzzer MCU GPIO"
+        depends on !BOARD_BEEP_VIA_IO_EXPANDER
+        default -1
+        range -1 48
 
     config BOARD_GPIO_OUT_EXPANDER_PIN
         int "Port1 GPIO_OUT expander pin index (0-15)"
         depends on BOARD_IO_EXPANDER_ENABLE
         default 8
         range 0 15
+
+    config BOARD_LCD_3WIRE_SWAP_SDA_SCL
+        bool "Diagnostic: swap LCD 3-wire SPI SDA/SCL on expander"
+        depends on BOARD_IO_EXPANDER_ENABLE
+        default n
+        help
+            排查用：交换 NCA9555 上 LCD 3线SPI 的 SDA(P0.3)/SCL(P0.4)。
+            三线自检无法发现 SDA/SCL 接反（两根被同时拉同电平都读回正常），
+            但接反会导致 ST7701 初始化全乱、黑屏。若打开后屏幕点亮，说明原理图
+            net 名标反了，应据此修正 board_io_expander.h 的引脚映射。
+
+    config BOARD_LCD_PCLK_ACTIVE_NEG
+        bool "Diagnostic: latch RGB data on PCLK falling edge"
+        default n
+        help
+            排查用：把 RGB 数据采样改到 PCLK 下降沿（pclk_active_neg=1）。
+            不同 ST7701 模组对 PCLK 边沿要求可能不同，边沿错会导致花屏/黑屏。
+
+    config BOARD_LCD_USE_GENERIC_RGB_TIMING
+        bool "Diagnostic: generic ST7701 RGB timing instead of 395HSD vendor"
+        default n
+        help
+            默认使用厂家 txt 中的 RGB porch（H 8+80+80, V 2+30+18, pclk≈20.6MHz）。
+            勾选此项改用 esp_lcd_st7701 内置 480×480@16MHz 时序做对比排查。
+
+    config BOARD_LCD_ST7701_DEFAULT_INIT
+        bool "Diagnostic: use ST7701 driver built-in default init"
+        default n
+        help
+            排查用：忽略本工程内置的 init 序列，改用 esp_lcd_st7701 驱动自带的
+            默认初始化。若打开后能点亮/有变化，说明内置 init 序列与本面板不匹配。
+
+    config BOARD_LCD_RGB_SOLID_TEST
+        bool "RGB bring-up: cycle solid R/G/B at boot (bypass LVGL)"
+        default n
+        help
+            点屏自检：LCD 初始化后，直接向所有 RGB 帧缓冲依次写入纯红/绿/蓝并
+            保持数秒，完全绕过 LVGL。用于判断 RGB 并口 + ST7701 初始化是否成功：
+              - 看到 红→绿→蓝 循环：RGB 链路与 ST7701 初始化 OK，问题在 LVGL/UI。
+              - 始终黑屏：ST7701 未初始化(3线SPI不通) 或 RGB 数据脚接错。
+            排查完成后请关闭此项。
+
+    config BOARD_LCD_RGB_SOLID_TEST_SECONDS
+        int "Seconds per color (R/G/B) in solid test"
+        depends on BOARD_LCD_RGB_SOLID_TEST
+        default 2
+        range 1 10
+
+    config BOARD_LCD_RGB_ELEMENT_BGR
+        bool "RGB panel: swap R/B in esp_lcd (rgb_ele_order BGR)"
+        default n
+        help
+            仅在 MADCTL=0x00 且红蓝仍反时可试。厂家 MADCTL=0x08 时不要开此项
+            （与寄存器 BGR 位双重交换）。默认 MADCTL=0x00 + RGB 即可。
+
+    config BOARD_TOUCH_MIRROR_X
+        bool "GT911 mirror X after read"
+        default n
+        help
+            Flip touch X to match ST7701 scan direction. Enable if taps land mirrored left/right.
+
+    config BOARD_TOUCH_MIRROR_Y
+        bool "GT911 mirror Y after read"
+        default n
+        help
+            Flip touch Y to match ST7701 scan direction. Enable if taps land mirrored top/bottom.
+
+    config BOARD_TOUCH_SWAP_XY
+        bool "GT911 swap X/Y after read"
+        default n
+        help
+            Swap touch axes. Enable if X/Y are exchanged vs the display.
 
 endmenu
 
@@ -58,15 +198,22 @@ menu "Withthewind board: RGB / LVGL display"
         int "RGB panel frame buffer count"
         default 3
         range 2 3
+        help
+            2 = double buffer; 3 = triple buffer (more PSRAM, smoother RGB scan-out).
 
     config BSP_LCD_RGB_BOUNCE_BUFFER_HEIGHT
         int "RGB bounce buffer height in lines (must divide 480)"
-        default 40
-        range 40 120
+        default 20
+        range 20 120
+        help
+            Bounce height in pixels (DMA, internal SRAM). Smaller frees WiFi/BLE DMA headroom.
+            480 must divide evenly (20, 24, 30, 40, 48, 60, ...).
 
     config BSP_DISPLAY_LVGL_AVOID_TEAR
         bool "LVGL full-frame RGB avoid tearing"
         default y
+        help
+            Use panel frame buffers + direct_mode (required for stable 480x480 RGB).
 
     config BSP_DISPLAY_LVGL_BUF_HEIGHT
         int "LVGL draw buffer height when avoid-tear is off"

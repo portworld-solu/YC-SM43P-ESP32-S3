@@ -1,11 +1,11 @@
 # Bus bridge example (Modbus + LVGL)
 
-Not compiled by default. To use:
+**Product path (preferred):** the integrated bridge + point table are already in
+`main/app/app_bus_bridge.*` and `app_modbus_map_config.h`. Edit the map, rebuild,
+and use `app_bus_bridge_notify_widget(room, slot)` from UI callbacks.
 
-1. Copy `app_bus_bridge_example.c` → `../app_bus_bridge.c`
-2. Copy `app_bus_bridge_example.h` → `../app_bus_bridge.h`
-3. Add `app/app_bus_bridge.c` to `main/CMakeLists.txt` `MAIN_SRCS`
-4. Call `app_bus_bridge_start()` after `gui_task_init()` in `main.c`
-5. From theme callbacks: `app_bus_bridge_post_write(slave, addr, value)`
+This `*_example.*` pair is a **minimal reference** (write queue only, no map/poll).
+Do not copy over the product files unless you intentionally replace them.
 
-Guide: `docs/api_guide/zh/guides/G01_modbus_rs485_lvgl.md`
+Guide: `docs/api_guide/zh/guides/G01_modbus_rs485_lvgl.md`  
+User note: `docs/user_notes/SM43P-ESP32/zh/07_用屏控RS485设备.md`

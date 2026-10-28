@@ -1,4 +1,4 @@
-/** Slate â€” helpers / chrome / callbacks */
+/** Slate â€?helpers / chrome / callbacks */
 #include "theme_local.h"
 #include "hub_ui.h"
 #include "hub_theme.h"
@@ -91,7 +91,7 @@ void quickbar(lv_obj_t *par)
     lv_obj_t *bar = lv_obj_create(par);
     lv_obj_remove_style_all(bar);
     lv_obj_set_width(bar, LV_PCT(100));
-    lv_obj_set_height(bar, 52);
+    lv_obj_set_height(bar, 58);
     lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_column(bar, 6, 0);
 
@@ -116,7 +116,7 @@ void quickbar(lv_obj_t *par)
         lv_obj_set_flex_flow(b, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(b, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_add_event_cb(b, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)items[i].r);
-        hub_ico_add(b, items[i].ico, p->accent, 18);
+        hub_ico_add(b, items[i].ico, p->accent, 20);
         lbl(b, zh ? items[i].zh : items[i].en, p->t1, hub_font());
     }
 }

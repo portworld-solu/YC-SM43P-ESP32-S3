@@ -7,6 +7,7 @@
 #include "hub_icons.h"
 #include "hub_i18n.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -48,32 +49,37 @@ void build_home(lv_obj_t *parent)
     hub_style_label(ll, m->protos[3].ok ? p->ink_on : p->alert, hub_font());
     lv_obj_center(ll);
 
+    /* Full-width climate → sensor calibration (power removed) */
     lv_obj_t *hero = lv_btn_create(root);
     lv_obj_remove_style_all(hero);
     hub_apply_card(hero, false);
     theme_card_chrome(hero, false);
     lv_obj_set_width(hero, LV_PCT(100));
-    lv_obj_set_height(hero, 72);
-    lv_obj_add_event_cb(hero, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_ENERGY);
-    char a[32], b[32];
-    snprintf(a, sizeof(a), "%.2f kW", (double)m->power_kw);
-    snprintf(b, sizeof(b), "%.1f° / %d%%", (double)m->indoor_c, m->rh);
-    lv_obj_t *l1 = lv_label_create(hero);
-    lv_label_set_text(l1, hub_tr("整屋功率", "Whole-home power"));
-    hub_style_label(l1, p->t3, hub_font());
-    lv_obj_align(l1, LV_ALIGN_TOP_LEFT, 0, 4);
-    lv_obj_t *v1 = lv_label_create(hero);
-    lv_label_set_text(v1, a);
-    hub_style_label(v1, p->accent, hub_font_clock());
-    lv_obj_align(v1, LV_ALIGN_BOTTOM_LEFT, 0, -4);
-    lv_obj_t *l2 = lv_label_create(hero);
-    lv_label_set_text(l2, hub_tr("室内温湿度", "Indoor T/RH"));
-    hub_style_label(l2, p->t3, hub_font());
-    lv_obj_align(l2, LV_ALIGN_TOP_RIGHT, 0, 4);
-    lv_obj_t *v2 = lv_label_create(hero);
-    lv_label_set_text(v2, b);
-    hub_style_label(v2, p->t1, hub_font_clock());
-    lv_obj_align(v2, LV_ALIGN_BOTTOM_RIGHT, 0, -4);
+    lv_obj_set_height(hero, 88);
+    lv_obj_add_event_cb(hero, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+    {
+        const bool clim_ok = hub_climate_ui_available();
+        char tb[24], rb[16];
+        if (clim_ok) {
+            snprintf(tb, sizeof(tb), "%.1f%s", (double)hub_climate_display_temp_c(), HUB_UNIT_C);
+            snprintf(rb, sizeof(rb), "%d%s", hub_climate_display_rh(), HUB_UNIT_RH_FULL);
+        } else {
+            snprintf(tb, sizeof(tb), "--%s", HUB_UNIT_C);
+            snprintf(rb, sizeof(rb), "--%s", HUB_UNIT_RH_FULL);
+        }
+        lv_obj_t *l2 = lv_label_create(hero);
+        lv_label_set_text(l2, hub_tr("室内温湿度 · 点此校准", "Indoor climate · tap to calibrate"));
+        hub_style_label(l2, p->t3, hub_font());
+        lv_obj_align(l2, LV_ALIGN_TOP_LEFT, 12, 10);
+        lv_obj_t *v1 = lv_label_create(hero);
+        lv_label_set_text(v1, tb);
+        hub_style_label(v1, clim_ok ? p->accent : p->t3, hub_font_clock());
+        lv_obj_align(v1, LV_ALIGN_BOTTOM_LEFT, 12, -12);
+        lv_obj_t *v2 = lv_label_create(hero);
+        lv_label_set_text(v2, rb);
+        hub_style_label(v2, clim_ok ? p->t1 : p->t3, hub_font_clock());
+        lv_obj_align(v2, LV_ALIGN_BOTTOM_RIGHT, -12, -12);
+    }
 
     lbl(root, hub_tr("协议健康度 · 点击切换", "Protocol health · tap"), p->t2, hub_font());
     for (int i = 0; i < 3; i++) {

@@ -1,6 +1,18 @@
 # Customer SDK defaults. Board pins are baked into board_bsp.a.
 CONFIG_IDF_TARGET="esp32s3"
 
+# Free UART0 (GPIO43/44) for RS485: console on USB Serial/JTAG.
+# idf_monitor: pick the USB-JTAG COM port (not the UART0 adapter).
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+# CONFIG_ESP_CONSOLE_UART_DEFAULT is not set
+
+# RS485 bring-up: quiet Wi-Fi/MQTT logs + TX/RX hex (disable for production).
+# CONFIG_APP_RS485_BENCH_MODE is not set
+
+# Customer builds: types/MB from app_modbus_map_config.h only (no on-screen editors).
+# CONFIG_HUB_UI_ENGINEER_EDIT is not set
+# CONFIG_APP_MODBUS_MAP_PERSIST_NVS is not set
+
 # Hub themes load PNG icons via SPIFFS + LVGL FS letter S: (must match hub_icons.c)
 CONFIG_APP_USE_SPIFFS_UI_ASSETS=y
 CONFIG_LV_USE_FS_POSIX=y

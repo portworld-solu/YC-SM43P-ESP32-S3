@@ -20,6 +20,6 @@
 #define APP_UI_THEME_METRO    10
 
 /* ===== select theme here (one of APP_UI_THEME_* above) ===== */
-#define APP_UI_THEME_ID APP_UI_THEME_SLATE
+#define APP_UI_THEME_ID APP_UI_THEME_SLATE 
 
 #define APP_UI_THEME_IS_HUB 1

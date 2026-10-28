@@ -43,5 +43,17 @@ const LIco = {
   layers: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/></svg>),
   drop: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M12 3s5.5 6.5 5.5 10.5a5.5 5.5 0 1 1-11 0C6.5 9.5 12 3 12 3z"/></svg>),
   plug2: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M9 7V3M15 7V3M7 7h10v3.5a5 5 0 0 1-10 0V7zM12 15.5V21"/></svg>),
+  /* Room tiles (match SPIFFS roomLiving / roomBed / roomKitchen / roomStudy) */
+  roomLiving: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><path d="M5 10c0-1.5 1.2-3 3.5-3.5C10 4.5 12 4 12 4s2 .5 3.5 2.5C18 7 19 8.5 19 10"/><path d="M4 12h16v4H4z"/><path d="M6 16v2M18 16v2"/><path d="M5 12V10h14v2"/></svg>),
+  roomBed: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><path d="M4 10h16v2H4z"/><path d="M5 7h5v3H5zM14 7h5v3h-5z"/><path d="M3 12h18v5H3z"/><path d="M5 17v2M19 17v2"/></svg>),
+  roomKitchen: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><path d="M10 3h4v4H10z"/><path d="M6 7h12l-1 3H7L6 7z"/><path d="M9 12c0 1-.5 2-1.2 2.5M12 12c0 1 0 2 0 2.5M15 12c0 1 .5 2 1.2 2.5"/></svg>),
+  roomStudy: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><path d="M5 8h3v9H5zM9 8h3v9H9z"/><path d="M14 9.5l4 7.5"/><path d="M4 18h16"/></svg>),
+  lang: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><path d="M5 6h6M8 6v2a6 6 0 0 1-3 5"/><path d="M11 8a6 6 0 0 1-3 5M6 13h5"/><path d="M14 8h5l-4 10h-1"/><path d="M15 14h4"/></svg>),
+  mqtt: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><rect x="3" y="3" width="10" height="10" rx="2"/><rect x="11" y="11" width="10" height="10" rx="2"/></svg>),
+  rs485: (p = {}) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...p}><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M6 9h5l2 1.5V9h3v4h-3l-2-1.5V13H6z"/><path d="M7 16h2M11 16h2M15 16h2"/></svg>),
 };
+/** Room id → icon component (parity with hub_ico_for_room). */
+LIco.forRoom = (id) => ({ living: LIco.roomLiving, bed: LIco.roomBed, kitchen: LIco.roomKitchen, study: LIco.roomStudy }[id] || LIco.home);
+/** Proto id → icon (parity with hub_ico_for_proto). */
+LIco.forProto = (id) => ({ rs485: LIco.rs485, mqtt: LIco.mqtt, wifi: LIco.wifi, modbus: LIco.bus }[id] || LIco.bus);
 window.LIco = LIco;

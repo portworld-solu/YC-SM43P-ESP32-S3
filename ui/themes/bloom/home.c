@@ -7,6 +7,7 @@
 #include "hub_icons.h"
 #include "hub_i18n.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -16,8 +17,6 @@ void build_home(lv_obj_t *parent)
 {
     const hub_palette_t *p = hub_palette();
     hub_model_t *m = hub_model();
-    hub_room_dev_t *d = &m->rooms[0];
-
     /*
      * Fixed 480 canvas with absolute bands (FE vertical rhythm):
      *   head 0–100 | rooms 100–340 | quick 340–388 | pills 388–456
@@ -73,31 +72,39 @@ void build_home(lv_obj_t *parent)
     lbl(hl, "Bloom", p->accent, hub_font());
     lv_obj_t *clk = hub_clock_label(hl, p->t1, hub_font_clock());
     lv_obj_set_style_text_letter_space(clk, -1, 0);
-    char clim[40];
-    snprintf(clim, sizeof(clim), hub_tr("室内 %.1f° · %d%%", "Indoor %.1f° · %d%%"),
-             (double)m->indoor_c, m->rh);
-    lbl(hl, clim, p->t3, hub_font());
+    {
+        char clim[40];
+        const bool clim_ok = hub_climate_ui_available();
+        if (clim_ok) {
+            snprintf(clim, sizeof(clim), hub_tr("室内 %.1f° · %d%%", "Indoor %.1f° · %d%%"),
+                     (double)hub_climate_display_temp_c(), hub_climate_display_rh());
+        } else {
+            snprintf(clim, sizeof(clim), "%s", hub_tr("室内 --° · --%", "Indoor --° · --%"));
+        }
+        lv_obj_t *clim_btn = lv_btn_create(hl);
+        lv_obj_remove_style_all(clim_btn);
+        lv_obj_set_width(clim_btn, LV_SIZE_CONTENT);
+        lv_obj_set_height(clim_btn, LV_SIZE_CONTENT);
+        lv_obj_add_event_cb(clim_btn, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+        lbl(clim_btn, clim, clim_ok ? p->t1 : p->t3, hub_font());
+    }
 
-    lv_obj_t *hvac = lv_btn_create(head);
-    lv_obj_remove_style_all(hvac);
-    lv_obj_set_size(hvac, 64, 64);
-    lv_obj_set_style_radius(hvac, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(hvac, p->bg_card, 0);
-    lv_obj_set_style_bg_opa(hvac, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(hvac, 1, 0);
-    lv_obj_set_style_border_color(hvac, p->line, 0);
-    lv_obj_set_style_shadow_width(hvac, 16, 0);
-    lv_obj_set_style_shadow_opa(hvac, LV_OPA_20, 0);
-    lv_obj_set_style_shadow_ofs_y(hvac, 6, 0);
-    lv_obj_set_style_shadow_color(hvac, lv_color_make(90, 60, 80), 0);
-    lv_obj_align(hvac, LV_ALIGN_RIGHT_MID, 0, 4);
-    lv_obj_add_event_cb(hvac, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_HVAC);
-    hub_ico_add(hvac, HUB_ICO_SNOW, p->cool, 18);
-    lv_obj_align(lv_obj_get_child(hvac, 0), LV_ALIGN_TOP_MID, 0, 10);
-    char acb[12];
-    snprintf(acb, sizeof(acb), d->ac_on ? "%d°" : "--", d->ac_sp);
-    lv_obj_t *acl = lbl(hvac, acb, p->cool, hub_font());
-    lv_obj_align(acl, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_t *wifi = lv_btn_create(head);
+    lv_obj_remove_style_all(wifi);
+    lv_obj_set_size(wifi, 64, 64);
+    lv_obj_set_style_radius(wifi, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(wifi, p->bg_card, 0);
+    lv_obj_set_style_bg_opa(wifi, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(wifi, 1, 0);
+    lv_obj_set_style_border_color(wifi, p->line, 0);
+    lv_obj_set_style_shadow_width(wifi, 16, 0);
+    lv_obj_set_style_shadow_opa(wifi, LV_OPA_20, 0);
+    lv_obj_set_style_shadow_ofs_y(wifi, 6, 0);
+    lv_obj_set_style_shadow_color(wifi, lv_color_make(90, 60, 80), 0);
+    lv_obj_align(wifi, LV_ALIGN_RIGHT_MID, 0, 4);
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
+    hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->accent, 22);
+    lv_obj_center(lv_obj_get_child(wifi, 0));
 
     /* ── Room 2×2 — fixed cell size, airy gap (FE minHeight 96, gap 12) ── */
     const lv_coord_t grid_x = 20;
@@ -140,12 +147,12 @@ void build_home(lv_obj_t *parent)
 
         lv_obj_t *badge = lv_obj_create(b);
         lv_obj_remove_style_all(badge);
-        lv_obj_set_size(badge, 36, 36);
+        lv_obj_set_size(badge, 40, 40);
         lv_obj_set_style_radius(badge, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
         lv_obj_set_style_bg_color(badge, lv_color_mix(hues[i], p->bg_card, LV_OPA_30), 0);
         lv_obj_clear_flag(badge, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-        hub_ico_add(badge, HUB_ICO_HOME, hues[i], 18);
+        hub_ico_add(badge, hub_ico_for_room(i), hues[i], 24);
         lv_obj_center(lv_obj_get_child(badge, 0));
 
         lv_obj_t *sp = lv_obj_create(b);

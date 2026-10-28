@@ -28,8 +28,11 @@
 #include "app_health.h"
 #include "app_beep.h"
 #include "app_coexist.h"
+#include "app_modbus_map.h"
 #if defined(CONFIG_APP_ENABLE_RS485) && CONFIG_APP_ENABLE_RS485
 #include "app_rs485.h"
+#include "app_rs485_bench.h"
+#include "app_bus_bridge.h"
 #endif
 
 static lv_timer_t *s_refr_timer_paused;
@@ -181,6 +184,17 @@ void app_main(void)
 
     gui_task_init();
     ui_bg_task_init();
+    (void)app_modbus_map_init();
+#if defined(CONFIG_APP_ENABLE_RS485) && CONFIG_APP_ENABLE_RS485
+    {
+        esp_err_t br_err = app_bus_bridge_start();
+        if (br_err != ESP_OK && br_err != ESP_ERR_NOT_SUPPORTED) {
+            ESP_LOGW("app", "app_bus_bridge_start: %s", esp_err_to_name(br_err));
+        }
+        /* Quiet logs + disable background poll when CONFIG_APP_RS485_BENCH_MODE */
+        app_rs485_bench_apply();
+    }
+#endif
     (void)app_health_monitor_start();
     ESP_ERROR_CHECK(wifi_management_start());
 #if APP_FEATURE_BLE || APP_FEATURE_MESH

@@ -21,9 +21,11 @@ function HubProvider({ children, initialRoute = "home" }) {
   const [clock, setClock] = useState(hubClockNow);
   const [wifiJoin, setWifiJoin] = useState(null);
   const [settings, setSettings] = useState({
-    brightness: 72, nightMode: false, lang: "zh", clickSound: true,
+    brightness: 72, nightMode: false, lang: "en", clickSound: true,
     standbyEn: true, standbyTimeoutSec: 120,
   });
+  /* Sensor calibration offsets (demo; parity with hub SENSOR_CAL). */
+  const [sensorCal, setSensorCal] = useState({ tempOffset: 0, rhOffset: 0 });
   const [network, setNetwork] = useState({
     wifiOn: true, ethOn: false, ssid: "Office-AP", ip: "192.168.1.42", ethIp: "192.168.1.10",
   });
@@ -261,6 +263,7 @@ function HubProvider({ children, initialRoute = "home" }) {
     activeScene, applyScene,
     toast, flash, powerKw, setPowerKw,
     settings, patchSettings, network, patchNetwork,
+    sensorCal, setSensorCal,
     wifiJoin, beginWifiJoin, cancelWifiJoin, submitWifiPassword,
     schedules, toggleSchedule, runSchedule,
     clock, metrics, screenFilter,
@@ -554,7 +557,7 @@ function HubGatewayPage() {
               background: r.ok ? "rgba(52,211,153,0.12)" : "rgba(244,63,94,0.12)",
               color: r.ok ? "var(--on)" : "var(--alert)",
             }}>
-              {r.id === "mqtt" || r.id === "wifi" ? <LIco.link width="16" height="16" /> : <LIco.bus width="16" height="16" />}
+              {(() => { const I = LIco.forProto(r.id); return <I width="16" height="16" />; })()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div>
@@ -630,6 +633,7 @@ function HubRouteView({ HomeView, theme }) {
     case "settings": return <TplSettings />;
     case "network": return <TplNetwork />;
     case "schedule": return <TplSchedule />;
+    case "sensor_cal": return <TplSensorCal />;
     case "room-edit": return <HubRoomEditPage />;
     default: return <Home />;
   }
@@ -696,7 +700,7 @@ function ThemeLiveInner({ theme, showChrome, HomeView, onThemeChange }) {
 
   const tabs = [
     ["home", "总览"], ["room", "房间"], ["scenes", "情景"], ["energy", "能耗"],
-    ["gateway", "总线"], ["security", "安防"], ["hvac", "温控"], ["appliances", "开关"],
+    ["gateway", "总线"], ["security", "安防"], ["sensor_cal", "传感校准"], ["hvac", "温控"], ["appliances", "开关"],
     ["settings", "设置"], ["network", "网络"], ["schedule", "日程"], ["minimal", "待机"],
   ];
 

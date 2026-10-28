@@ -6,6 +6,7 @@
 #include "hub_model.h"
 #include "hub_icons.h"
 #include "app_ui.h"
+#include "hub_climate_offset.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -34,18 +35,30 @@ void build_home(lv_obj_t *parent)
     lv_obj_set_flex_flow(rail, LV_FLEX_FLOW_COLUMN);
     lbl(rail, "INK", p->accent, hub_font());
     hub_clock_label(rail, p->t1, hub_font_clock());
-    char clim[28];
-    snprintf(clim, sizeof(clim), "%.1f° / %d%%", (double)m->indoor_c, m->rh);
-    lbl(rail, clim, p->t2, hub_font());
+    {
+        const bool clim_ok = hub_climate_ui_available();
+        char clim[28];
+        if (clim_ok) {
+            snprintf(clim, sizeof(clim), "%.1f° / %d%%", (double)hub_climate_display_temp_c(),
+                     hub_climate_display_rh());
+        } else {
+            snprintf(clim, sizeof(clim), "--° / --%%");
+        }
+        lv_obj_t *clim_btn = lv_btn_create(rail);
+        lv_obj_remove_style_all(clim_btn);
+        lv_obj_set_width(clim_btn, LV_PCT(100));
+        lv_obj_add_event_cb(clim_btn, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+        lbl(clim_btn, clim, clim_ok ? p->t1 : p->t3, hub_font());
+    }
     for (int i = 0; i < 3; i++) {
         lv_obj_t *b = lv_btn_create(rail);
         lv_obj_remove_style_all(b);
         lv_obj_add_event_cb(b, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_GATEWAY);
         lbl(b, m->protos[i].name, m->protos[i].ok ? p->on : p->alert, hub_font());
     }
-    lv_obj_t *pwr = btn_go(rail, "PWR", HUB_ROUTE_ENERGY, true);
-    lv_obj_set_width(pwr, LV_PCT(100));
-    lv_obj_set_height(pwr, 36);
+    lv_obj_t *wifi = btn_go(rail, "WiFi", HUB_ROUTE_NETWORK, true);
+    lv_obj_set_width(wifi, LV_PCT(100));
+    lv_obj_set_height(wifi, 36);
 
     lv_obj_t *mainw = lv_obj_create(root);
     lv_obj_remove_style_all(mainw);

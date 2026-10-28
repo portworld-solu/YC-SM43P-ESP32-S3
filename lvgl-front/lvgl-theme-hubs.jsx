@@ -67,19 +67,22 @@ function HubQuickBar({ dense = false }) {
   );
 }
 
-/** Slate — industrial room grid */
+/** Slate — parity with ui/themes/slate/home.c (no Power card; climate → sensor_cal). */
 function ThemeHubSlate({ clock }) {
   const hub = useHubOrDemo();
   const t = hubTime(hub, clock);
+  const zh = hub ? hub.settings.lang !== "en" : false;
   const rooms = hub ? hub.rooms : [
-    { id: "living", name: "Living", nameEn: "Living", devices: 6 },
-    { id: "bed", name: "Bedroom", nameEn: "Bedroom", devices: 4 },
-    { id: "kitchen", name: "Kitchen", nameEn: "Kitchen", devices: 4 },
-    { id: "study", name: "Study", nameEn: "Study", devices: 3 },
+    { id: "living", name: "客厅", nameEn: "Living", devices: 6 },
+    { id: "bed", name: "主卧", nameEn: "Bedroom", devices: 4 },
+    { id: "kitchen", name: "厨房", nameEn: "Kitchen", devices: 4 },
+    { id: "study", name: "书房", nameEn: "Study", devices: 3 },
   ];
-  const power = hub ? `${hub.powerKw.toFixed(1)}kW` : "2.4kW";
-  const indoor = hub ? `${hub.metrics.indoor}°` : "24.5°";
-  const rh = hub ? `${hub.metrics.rh}%` : "48%";
+  const tOff = hub?.sensorCal?.tempOffset || 0;
+  const rOff = hub?.sensorCal?.rhOffset || 0;
+  const indoor = hub ? `${(Number(hub.metrics.indoor) + tOff).toFixed(1)}°` : "24.5°";
+  const rh = hub ? `${Math.round(Number(hub.metrics.rh) + rOff)}%` : "48%";
+  const climOk = true;
   const protos = hub ? hub.protocols.slice(0, 3) : [
     { id: "mqtt", name: "MQTT", ok: true },
     { id: "modbus", name: "Modbus", ok: true },
@@ -90,8 +93,10 @@ function ThemeHubSlate({ clock }) {
       <div className="lv-head">
         <div className="clock">{t}</div>
         <div className="room">Slate Hub</div>
-        <div className="wx" style={{ cursor: "pointer" }} onClick={() => hub && hub.go(hub.network.wifiOn ? "gateway" : "network")}>
-          {hub && !hub.network.wifiOn ? <LIco.wifiOff width="18" height="18" /> : <LIco.wifi width="18" height="18" />}
+        <div className="wx" style={{ cursor: "pointer" }} onClick={() => hub && hub.go("network")}>
+          {hub && !hub.network.wifiOn
+            ? <LIco.wifiOff width="20" height="20" />
+            : <LIco.wifi width="20" height="20" />}
         </div>
       </div>
       <div className="lv-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -102,39 +107,51 @@ function ThemeHubSlate({ clock }) {
             </SoftPill>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {[
-            [power, "Power", () => hub && hub.go("energy")],
-            [indoor, "Indoor", () => hub && hub.go("hvac")],
-            [rh, "RH", () => hub && hub.go("hvac")],
-          ].map(([v, l, fn]) => (
-            <button key={l} type="button" onClick={fn} style={{
-              background: "var(--bg-card)", border: "1px solid var(--line)", borderRadius: "var(--radius)",
-              padding: 12, color: "var(--t1)", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-            }}>
-              <div style={{ fontSize: 10, color: "var(--t3)", fontWeight: 700 }}>{l}</div>
-              <div style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>{v}</div>
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flex: 1 }}>
+        {/* Full-width climate → sensor calibration (Power removed) */}
+        <button
+          type="button"
+          onClick={() => hub && hub.go("sensor_cal")}
+          style={{
+            width: "100%", height: 112, flexShrink: 0, position: "relative",
+            background: "var(--bg-card)", border: "1px solid var(--line)", borderRadius: "var(--radius)",
+            color: "var(--t1)", cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "10px 12px",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "var(--t3)", fontWeight: 600 }}>
+            {zh ? "室内温湿度 · 点此校准" : "Indoor climate · tap to calibrate"}
+          </div>
+          <div style={{
+            position: "absolute", left: 12, bottom: 14,
+            fontSize: 28, fontWeight: 600, fontFamily: "var(--font-d)",
+            color: climOk ? "var(--accent)" : "var(--t3)",
+          }}>{indoor}</div>
+          <div style={{
+            position: "absolute", right: 14, bottom: 14,
+            fontSize: 28, fontWeight: 600, fontFamily: "var(--font-d)",
+            color: climOk ? "var(--t1)" : "var(--t3)",
+          }}>{rh}</div>
+        </button>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flex: 1, minHeight: 0 }}>
           {rooms.map((r) => {
             const on = hub ? hub.roomActive(r.id) : true;
-            const label = hub ? hub.roomLabel(r) : r.name;
+            const label = hub ? hub.roomLabel(r) : (zh ? r.name : (r.nameEn || r.name));
+            const pts = (hub && hub.roomWidgets && hub.roomWidgets[r.id])
+              ? hub.roomWidgets[r.id].filter((w) => w.enabled !== false).length
+              : r.devices;
+            const RoomIco = LIco.forRoom(r.id);
             return (
               <button key={r.id} type="button" onClick={() => hub && hub.openRoom(r.id)} style={{
                 background: "var(--bg-card)", border: "1px solid var(--line)",
-                borderLeft: `3px solid ${on ? "var(--accent)" : "transparent"}`,
+                borderLeft: `3px solid ${on ? "var(--accent)" : "var(--line)"}`,
                 borderRadius: "var(--radius)", padding: 12, display: "flex", flexDirection: "column",
-                justifyContent: "space-between", color: "var(--t1)", cursor: "pointer",
-                textAlign: "left", fontFamily: "inherit", minHeight: 88,
+                alignItems: "center", justifyContent: "center", gap: 6,
+                color: "var(--t1)", cursor: "pointer",
+                textAlign: "center", fontFamily: "inherit", minHeight: 88,
               }}>
-                <LIco.home width="20" height="20" style={{ color: "var(--accent)" }} />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
-                  <div style={{ fontSize: 11, color: "var(--t3)" }}>
-                    {r.devices} pts · {on ? "Active" : "Idle"}
-                  </div>
+                <RoomIco width="24" height="24" style={{ color: "var(--accent)" }} />
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
+                <div style={{ fontSize: 11, color: on ? "var(--on)" : "var(--t3)" }}>
+                  {pts} pts · {on ? "Active" : "Idle"}
                 </div>
               </button>
             );
@@ -151,16 +168,27 @@ const hubBar = {
   background: "var(--bg-card)", color: "var(--t1)", fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
 };
 
-/** Sand — daylight list + scene CTAs */
+/** Sand — list + scene CTAs (aligned with slate routes: network / sensor_cal / 4 rooms). */
 function ThemeHubSand({ clock }) {
   const hub = useHubOrDemo();
   const t = hubTime(hub, clock);
-  const rooms = hub ? hub.rooms.slice(0, 3) : [
+  const rooms = hub ? hub.rooms : [
     { id: "living", name: "客厅", devices: 6 },
     { id: "bed", name: "主卧", devices: 4 },
     { id: "kitchen", name: "厨房", devices: 4 },
+    { id: "study", name: "书房", devices: 3 },
   ];
-  const subs = { living: "空调 · 窗帘 · 灯", bed: "地暖 · 灯光", kitchen: "插座 · 水阀", study: "灯 · 空调" };
+  const subs = {
+    living: "AC / Curtain / Lights",
+    bed: "Heat / Lights",
+    kitchen: "Outlet / Valve",
+    study: "Lights / Curtain",
+  };
+  const tOff = hub?.sensorCal?.tempOffset || 0;
+  const rOff = hub?.sensorCal?.rhOffset || 0;
+  const climLine = hub
+    ? `Indoor ${(Number(hub.metrics.indoor) + tOff).toFixed(1)} / RH ${Math.round(Number(hub.metrics.rh) + rOff)}% / ${hub.activeScene}`
+    : "Indoor 24.0 / RH 48%";
   const sandBtn = {
     flex: 1, height: 48, borderRadius: 14, border: "1px solid var(--line)",
     background: "var(--bg-card)", color: "var(--t1)", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit",
@@ -171,22 +199,28 @@ function ThemeHubSand({ clock }) {
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--t3)", letterSpacing: "0.08em" }}>SAND HUB</div>
           <div style={{ fontSize: 56, fontWeight: 300, lineHeight: 1, letterSpacing: "-0.03em", marginTop: 4 }}>{t}</div>
-          <div style={{ fontSize: 14, color: "var(--t3)", marginTop: 6 }}>
-            {hub ? `${hub.metrics.indoor}° · RH ${hub.metrics.rh}% · ${hub.activeScene}` : "周六 · 晴 · 24°"}
-          </div>
+          <button type="button" onClick={() => hub && hub.go("sensor_cal")} style={{
+            background: "none", border: "none", padding: 0, marginTop: 6, cursor: "pointer",
+            fontSize: 14, color: "var(--t3)", fontFamily: "inherit", textAlign: "left",
+          }}>
+            {climLine}
+          </button>
         </div>
-        <button type="button" onClick={() => hub && hub.go("energy")} style={{
+        <button type="button" onClick={() => hub && hub.go("network")} style={{
           width: 72, height: 72, borderRadius: 20, background: "var(--bg-card)",
           border: "1px solid var(--line)", display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", color: "var(--t1)", fontFamily: "inherit",
         }}>
-          <LIco.gauge width="22" height="22" style={{ color: "var(--accent)" }} />
-          <span style={{ fontSize: 11, fontWeight: 700 }}>{hub ? `${hub.powerKw.toFixed(1)}kW` : "1.8kW"}</span>
+          {hub && !hub.network.wifiOn
+            ? <LIco.wifiOff width="22" height="22" style={{ color: "var(--accent)" }} />
+            : <LIco.wifi width="22" height="22" style={{ color: "var(--accent)" }} />}
+          <span style={{ fontSize: 11, fontWeight: 700 }}>WiFi</span>
         </button>
       </div>
-      <div style={{ flex: 1, padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ flex: 1, padding: "0 20px", display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", minHeight: 0 }}>
         {rooms.map((r) => {
           const on = hub ? hub.roomActive(r.id) : r.id !== "bed";
+          const RoomIco = LIco.forRoom(r.id);
           return (
             <button key={r.id} type="button" onClick={() => hub && hub.openRoom(r.id)} style={{
               display: "flex", alignItems: "center", gap: 14, padding: "12px 16px",
@@ -198,12 +232,12 @@ function ThemeHubSand({ clock }) {
                 width: 44, height: 44, borderRadius: 14,
                 background: on ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "var(--bg-card-2)",
                 color: on ? "var(--accent)" : "var(--t3)", display: "flex", alignItems: "center", justifyContent: "center",
-              }}><LIco.home width="22" height="22" /></div>
+              }}><RoomIco width="24" height="24" /></div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{hub ? hub.roomLabel(r) : r.name}</div>
                 <div style={{ fontSize: 12, color: "var(--t3)" }}>{subs[r.id] || `${r.devices} pts`}</div>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: on ? "var(--on)" : "var(--t4)" }}>{on ? "运行" : "待机"}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: on ? "var(--on)" : "var(--t4)" }}>{on ? "Active" : "Idle"}</span>
             </button>
           );
         })}

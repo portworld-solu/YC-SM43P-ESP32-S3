@@ -1,9 +1,10 @@
 ﻿cmake_minimum_required(VERSION 3.19)
 
-# Customer SDK — no vendor pin profile in SDKCONFIG_DEFAULTS.
+# Customer SDK — fully open-source (board pins + screen profile included).
 set(SDKCONFIG_DEFAULTS
     "${CMAKE_CURRENT_LIST_DIR}/config/sdkconfig.common.defaults"
     "${CMAKE_CURRENT_LIST_DIR}/config/sdkconfig.lvgl.defaults"
+    "${CMAKE_CURRENT_LIST_DIR}/config/sdkconfig.board.395hsd.defaults"
     "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults"
 )
 
@@ -16,6 +17,16 @@ execute_process(
 )
 if(NOT _pin_lvgl_rc EQUAL 0)
     message(WARNING "pin_esp_lvgl_port_lvgl.py failed (rc=${_pin_lvgl_rc})")
+endif()
+
+# board_display_present_fb needs lvgl_port_disp_wait_rgb_trans_done (local LVGL8 patch).
+execute_process(
+    COMMAND python "${CMAKE_CURRENT_LIST_DIR}/tools/patch_esp_lvgl_port_wait_rgb.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+    RESULT_VARIABLE _patch_wait_rgb_rc
+)
+if(NOT _patch_wait_rgb_rc EQUAL 0)
+    message(WARNING "patch_esp_lvgl_port_wait_rgb.py failed (rc=${_patch_wait_rgb_rc})")
 endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

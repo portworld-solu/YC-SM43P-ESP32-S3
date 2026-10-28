@@ -1,4 +1,4 @@
-﻿build/
+build/
 managed_components/
 dependencies.lock
 sdkconfig
@@ -10,3 +10,4 @@ sdkconfig.old
 .vscode/
 .idea/
 __pycache__/
+.DS_Store

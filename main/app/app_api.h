@@ -8,8 +8,10 @@
  */
 
 #include "app_beep.h"
+#include "app_bus_bridge.h"
 #include "app_coexist.h"
 #include "app_gpio_out.h"
+#include "app_modbus_map.h"
 #include "app_modbus_rtu.h"
 #include "app_rs485.h"
 #include "app_wifi_util.h"

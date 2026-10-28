@@ -6,8 +6,8 @@
 #include "hub_model.h"
 #include "hub_icons.h"
 #include "hub_i18n.h"
+#include "hub_climate_offset.h"
 #include "app_ui.h"
-#include "ui_bg_task.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -37,8 +37,7 @@ void build_home(lv_obj_t *parent)
     lbl(head, "Slate Hub", p->t1, hub_font());
     lv_obj_t *wifi = lv_btn_create(head);
     lv_obj_remove_style_all(wifi);
-    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED,
-                        (void *)(uintptr_t)(m->protos[3].ok ? HUB_ROUTE_GATEWAY : HUB_ROUTE_NETWORK));
+    lv_obj_add_event_cb(wifi, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_NETWORK);
     hub_ico_add(wifi, m->protos[3].ok ? HUB_ICO_WIFI : HUB_ICO_WIFI_OFF, p->accent, 20);
 
     lv_obj_t *pills = lv_obj_create(root);
@@ -62,50 +61,39 @@ void build_home(lv_obj_t *parent)
         lv_obj_center(l);
     }
 
-    /* Metrics: power + AHT20 indoor T/RH (hub_model filled by ui_bg_task). */
-    lv_obj_t *metrics = lv_obj_create(root);
-    lv_obj_remove_style_all(metrics);
-    lv_obj_set_width(metrics, LV_PCT(100));
-    lv_obj_set_height(metrics, 72);
-    lv_obj_set_flex_flow(metrics, LV_FLEX_FLOW_ROW);
-    lv_obj_set_style_pad_column(metrics, 8, 0);
-    char mv0[24], mv1[24], mv2[24];
-    snprintf(mv0, sizeof(mv0), "%.1fkW", (double)m->power_kw);
-    const bool aht_ok = ui_bg_task_indoor_ready();
-    if (aht_ok) {
-        snprintf(mv1, sizeof(mv1), "%.1f°C", (double)m->indoor_c);
-        snprintf(mv2, sizeof(mv2), "%d%%", m->rh);
+    /* Full-width climate → sensor calibration (power removed) */
+    const bool clim_ok = hub_climate_ui_available();
+    char tbuf[24], rbuf[16];
+    if (clim_ok) {
+        snprintf(tbuf, sizeof(tbuf), "%.1f%s", (double)hub_climate_display_temp_c(), HUB_UNIT_C);
+        snprintf(rbuf, sizeof(rbuf), "%d%s", hub_climate_display_rh(), HUB_UNIT_RH_FULL);
     } else {
-        /* Avoid showing hub_model demo defaults before the first AHT20 sample. */
-        snprintf(mv1, sizeof(mv1), "--.-°C");
-        snprintf(mv2, sizeof(mv2), "--%%");
+        snprintf(tbuf, sizeof(tbuf), "--%s", HUB_UNIT_C);
+        snprintf(rbuf, sizeof(rbuf), "--%s", HUB_UNIT_RH_FULL);
     }
-    const char *mvs[] = { mv0, mv1, mv2 };
-    const char *mls[] = {
-        hub_tr("功率", "Power"),
-        hub_tr("温度", "Temp"),
-        hub_tr("湿度", "Humidity"),
-    };
-    hub_route_t mrs[] = { HUB_ROUTE_ENERGY, HUB_ROUTE_HVAC, HUB_ROUTE_HVAC };
-    for (int i = 0; i < 3; i++) {
-        lv_obj_t *c = lv_btn_create(metrics);
-        lv_obj_remove_style_all(c);
-        hub_apply_card(c, false);
-        theme_card_chrome(c, false);
-        lv_obj_set_flex_grow(c, 1);
-        lv_obj_set_height(c, LV_PCT(100));
-        lv_obj_add_event_cb(c, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)mrs[i]);
-        lv_obj_t *v = lv_label_create(c);
-        lv_label_set_text(v, mvs[i]);
-        /* Accent when live; muted until AHT20 has delivered a sample. */
-        const lv_color_t vc = (i > 0 && !aht_ok) ? p->t3 : p->accent;
-        hub_style_label(v, vc, hub_font());
-        lv_obj_align(v, LV_ALIGN_TOP_MID, 0, 8);
-        lv_obj_t *l = lv_label_create(c);
-        lv_label_set_text(l, mls[i]);
-        hub_style_label(l, p->t3, hub_font());
-        lv_obj_align(l, LV_ALIGN_BOTTOM_MID, 0, -8);
-    }
+
+    lv_obj_t *clim = lv_btn_create(root);
+    lv_obj_remove_style_all(clim);
+    hub_apply_card(clim, false);
+    theme_card_chrome(clim, false);
+    lv_obj_set_width(clim, LV_PCT(100));
+    lv_obj_set_height(clim, 112);
+    lv_obj_add_event_cb(clim, go_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)HUB_ROUTE_SENSOR_CAL);
+
+    lv_obj_t *tl = lv_label_create(clim);
+    lv_label_set_text(tl, hub_tr("室内温湿度 · 点此校准", "Indoor climate · tap to calibrate"));
+    hub_style_label(tl, p->t3, hub_font());
+    lv_obj_align(tl, LV_ALIGN_TOP_LEFT, 12, 10);
+
+    lv_obj_t *tv = lv_label_create(clim);
+    lv_label_set_text(tv, tbuf);
+    hub_style_label(tv, clim_ok ? p->accent : p->t3, hub_font_clock());
+    lv_obj_align(tv, LV_ALIGN_BOTTOM_LEFT, 12, -14);
+
+    lv_obj_t *rv = lv_label_create(clim);
+    lv_label_set_text(rv, rbuf);
+    hub_style_label(rv, clim_ok ? p->t1 : p->t3, hub_font_clock());
+    lv_obj_align(rv, LV_ALIGN_BOTTOM_RIGHT, -14, -14);
 
     lv_obj_t *grid = lv_obj_create(root);
     lv_obj_remove_style_all(grid);
@@ -130,7 +118,7 @@ void build_home(lv_obj_t *parent)
         lv_obj_set_flex_flow(b, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(b, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_add_event_cb(b, room_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
-        hub_ico_add(b, HUB_ICO_HOME, p->accent, 20);
+        hub_ico_add(b, hub_ico_for_room(i), p->accent, 24);
         lbl(b, hub_model_room_name(i), p->t1, hub_font());
         char pts[24];
         snprintf(pts, sizeof(pts), "%d pts · %s", hub_model_enabled_widget_count(i), on ? "Active" : "Idle");

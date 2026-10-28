@@ -1,7 +1,9 @@
-﻿# Agent notes (public 43P SDK)
+# Agent notes
 
-When helping with this repository:
+Public Hub UI SDK for **YC-SM43P** ([portworld-solu](https://github.com/portworld-solu)).
 
-- Start from [docs/THEME_SECONDARY_DEV.md](docs/THEME_SECONDARY_DEV.md) or [docs/THEME_SECONDARY_DEV_EN.md](docs/THEME_SECONDARY_DEV_EN.md)
-- Only change the open layer (`ui/themes`, `hub_ui`, `main/app`, `main/board/aht20*`)
-- Do not reverse closed `.a` libraries or invent unpublished pin maps
+- Architecture: [docs/ARCHITECTURE_EN.md](docs/ARCHITECTURE_EN.md)
+- Pins / schematics: [docs/BOARD_PINOUT.md](docs/BOARD_PINOUT.md)
+- Code layout: [main/STRUCTURE.md](main/STRUCTURE.md)
+
+Do not block RS485/Modbus inside LVGL callbacks. Prefer `ui/themes/` and `main/app` for product changes.

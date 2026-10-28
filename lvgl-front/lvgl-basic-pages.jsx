@@ -86,19 +86,26 @@ function TplSettings() {
         )}
         <div className="eyebrow" style={{ margin: "12px 0 8px" }}>系统</div>
         <SettingRow
-          icon={<LIco.info width="18" height="18" />}
-          title="界面语言"
+          icon={<LIco.lang width="18" height="18" />}
+          title={s.lang === "zh" ? "界面语言" : "Language"}
           sub={s.lang === "zh" ? "简体中文" : "English"}
-          right={<span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 700 }}>{s.lang.toUpperCase()}</span>}
+          right={<span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 700 }}>{s.lang === "zh" ? "ZH" : "EN"}</span>}
           onClick={() => {
             set({ lang: s.lang === "zh" ? "en" : "zh" });
             hub.flash(s.lang === "zh" ? "Language: EN" : "语言：中文");
           }}
         />
         <SettingRow
+          icon={<LIco.drop width="18" height="18" />}
+          title={s.lang === "zh" ? "传感校准" : "Sensor calibration"}
+          sub={s.lang === "zh" ? "温度 / 湿度补偿" : "Temp / RH offset"}
+          right={<LIco.chevron width="16" height="16" style={{ color: "var(--t3)" }} />}
+          onClick={() => hub.go("sensor_cal")}
+        />
+        <SettingRow
           icon={<LIco.wifi width="18" height="18" />}
-          title="网络与配网"
-          sub={hub.network.wifiOn ? hub.network.ssid : "Wi-Fi 关闭"}
+          title={s.lang === "zh" ? "网络与配网" : "Network"}
+          sub={hub.network.wifiOn ? hub.network.ssid : (s.lang === "zh" ? "WiFi 关闭" : "WiFi off")}
           right={<LIco.chevron width="16" height="16" style={{ color: "var(--t3)" }} />}
           onClick={() => hub.go("network")}
         />
@@ -335,4 +342,84 @@ function TplSchedule() {
   );
 }
 
-Object.assign(window, { TplSettings, TplNetwork, TplSchedule, SettingRow, WifiJoinSheet });
+/** Sensor calibration — parity with HUB_ROUTE_SENSOR_CAL */
+function TplSensorCal() {
+  const hub = useHub();
+  const zh = hub.settings.lang !== "en";
+  const cal = hub.sensorCal || { tempOffset: 0, rhOffset: 0 };
+  const setCal = (patch) => hub.setSensorCal((prev) => ({ ...prev, ...patch }));
+  const rawT = hub.metrics.indoor;
+  const rawRh = hub.metrics.rh;
+  const showT = (Number(rawT) + Number(cal.tempOffset)).toFixed(1);
+  const showRh = Math.round(Number(rawRh) + Number(cal.rhOffset));
+  const step = (key, delta, min, max) => {
+    const next = Math.max(min, Math.min(max, Math.round((cal[key] + delta) * 10) / 10));
+    setCal({ [key]: next });
+  };
+  const card = {
+    background: "var(--bg-card)", border: "1px solid var(--line)", borderRadius: "var(--radius)",
+    padding: 14, marginBottom: 10,
+  };
+  return (
+    <HubShell
+      title={zh ? "传感校准" : "Sensor calibration"}
+      onBack={() => hub.go("settings")}
+      right={<LIco.drop width="18" height="18" />}
+    >
+      <ScrollPane>
+        <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 10 }}>
+          {zh ? "补偿后用于首页与房间示值（演示）" : "Offsets apply to home climate display (demo)"}
+        </div>
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div className="badge" style={{ width: 32, height: 32, background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>
+              <LIco.gauge width="16" height="16" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>{zh ? "温度补偿" : "Temp offset"}</div>
+              <div style={{ fontSize: 11, color: "var(--t3)" }}>{zh ? `示值 ${showT}°` : `Shown ${showT}°`}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <button type="button" className="ctrl-btn" style={{ width: 40, height: 40 }} onClick={() => step("tempOffset", -0.1, -5, 5)}>
+              <LIco.minus width="16" height="16" />
+            </button>
+            <div style={{ fontSize: 22, fontWeight: 600, fontFamily: "var(--font-d)" }}>
+              {cal.tempOffset > 0 ? "+" : ""}{cal.tempOffset.toFixed(1)}°
+            </div>
+            <button type="button" className="ctrl-btn" style={{ width: 40, height: 40 }} onClick={() => step("tempOffset", 0.1, -5, 5)}>
+              <LIco.plus width="16" height="16" />
+            </button>
+          </div>
+        </div>
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div className="badge" style={{ width: 32, height: 32, background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>
+              <LIco.drop width="16" height="16" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700 }}>{zh ? "湿度补偿" : "RH offset"}</div>
+              <div style={{ fontSize: 11, color: "var(--t3)" }}>{zh ? `示值 ${showRh}%` : `Shown ${showRh}%`}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <button type="button" className="ctrl-btn" style={{ width: 40, height: 40 }} onClick={() => step("rhOffset", -1, -20, 20)}>
+              <LIco.minus width="16" height="16" />
+            </button>
+            <div style={{ fontSize: 22, fontWeight: 600, fontFamily: "var(--font-d)" }}>
+              {cal.rhOffset > 0 ? "+" : ""}{cal.rhOffset}%
+            </div>
+            <button type="button" className="ctrl-btn" style={{ width: 40, height: 40 }} onClick={() => step("rhOffset", 1, -20, 20)}>
+              <LIco.plus width="16" height="16" />
+            </button>
+          </div>
+        </div>
+      </ScrollPane>
+      <button type="button" className="basic-cta" style={{ flexShrink: 0 }} onClick={() => hub.go("home")}>
+        {zh ? "返回首页" : "Back to home"}
+      </button>
+    </HubShell>
+  );
+}
+
+Object.assign(window, { TplSettings, TplNetwork, TplSchedule, TplSensorCal, SettingRow, WifiJoinSheet });
