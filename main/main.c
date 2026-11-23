@@ -1,3 +1,4 @@
+#include "panel_loader.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
@@ -104,6 +105,19 @@ static void app_wdt_relax_for_lvgl_init(void)
 void app_main(void)
 {
     ESP_ERROR_CHECK(wifi_management_foundation_init());
+#if CONFIG_PANEL_LOADER_ENABLE
+    /* Optional passwordless OTA service: trusted management LAN only. */
+    {
+        const panel_loader_config_t loader_cfg = {
+            .mqtt_nvs_namespace = "panel_mqtt",
+            .http_port = 80,
+        };
+        esp_err_t loader_err = panel_loader_start(&loader_cfg);
+        if (loader_err != ESP_OK)
+            ESP_LOGW("panel_loader", "start failed: %s", esp_err_to_name(loader_err));
+    }
+#endif
+
     ESP_ERROR_CHECK(app_low_power_init());
 #if APP_FEATURE_BLE || APP_FEATURE_MESH
     ESP_ERROR_CHECK(bt_management_init(&(bt_mgmt_config_t){

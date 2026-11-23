@@ -120,6 +120,8 @@ list(APPEND MAIN_INCLUDE_DIRS
         "${UI_DIR}"
 )
 
+list(APPEND MAIN_REQUIRES panel_loader)
+
 idf_component_register(
     SRCS ${MAIN_SRCS}
     INCLUDE_DIRS ${MAIN_INCLUDE_DIRS}

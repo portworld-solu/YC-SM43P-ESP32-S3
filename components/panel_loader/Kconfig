@@ -1,0 +1,11 @@
+menu "Panel OTA Loader"
+    config PANEL_LOADER_ENABLE
+        bool "Enable local HTTP OTA loader (trusted LAN only)"
+        default n
+        help
+            Enable the passwordless local firmware upload/configuration UI.
+            Any LAN client that can reach this panel can upload application
+            firmware, change MQTT settings, or reboot the panel. Enable only
+            on a trusted isolated management network; never expose to guests
+            or to the internet.
+endmenu

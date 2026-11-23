@@ -21,6 +21,24 @@ Open-source customer firmware for a smart Hub HMI: display/touch bring-up, Wi‑
 
 ---
 
+## Web-based OTA firmware updates (ESP32-S3)
+
+The optional **Panel OTA Loader** component adds a local browser interface for application firmware updates over Ethernet/Wi-Fi. Upload a compatible ESP-IDF **application `.bin`** directly to the device; the firmware is validated, written to the inactive OTA partition and then the panel automatically restarts. No MQTT broker, cloud service, or USB cable is involved in subsequent application updates.
+
+![OTA Loader dashboard, values redacted from a hardware bench test](docs/images/ota-loader-dashboard.png)
+
+![Successful firmware validation and automatic restart](docs/images/ota-loader-verified-reboot.png)
+
+**Requirements:** the initial firmware must already include the loader (installed once over USB, or preferably provisioned by the manufacturer), a partition table with `ota_0` and `ota_1`, and an IP connection to the panel. The loader updates **application images only**; do not upload merged-flash images, bootloaders, partition tables, or SPIFFS images.
+
+The web UI also offers optional MQTT broker/user/password storage in an NVS namespace. **The factory MQTT client must be adapted to consume these settings**; storing values alone does not change its connection configuration.
+
+**Security:** the current lab-tested loader intentionally has **no login**, so it must be explicitly enabled on an isolated and trusted management LAN. Never expose TCP/80 to the internet, a guest VLAN, or other untrusted clients. The password is hidden from GET responses but is provisioned over HTTP, not encrypted in transit. See [OTA Loader documentation](docs/OTA_LOADER.md) for installation, limitations and evidence.
+
+**Espressif references:** [Native OTA API](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32s3/api-reference/system/ota.html) and [HTTPS OTA](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32s3/api-reference/system/esp_https_ota.html). The web uploader uses the **native OTA APIs**; `esp_https_ota` is a complementary approach for device-initiated HTTPS downloads, not the upload path implemented here.
+
+---
+
 ## Hardware reference
 
 Firmware pin defaults live in `config/sdkconfig.board.395hsd.defaults` and [docs/BOARD_PINOUT.md](docs/BOARD_PINOUT.md). Schematics below match the YC-SM43P board.
