@@ -53,6 +53,18 @@ RGB data/sync, TP I2C, CH390 SPI, UART0, backlight PWM (GPIO4).
 
 ![UART and GPIO_OUT connector](docs/images/uart_gpio_connector.png)
 
+### RS485 (UART7 + auto DE)
+
+![RS485 UART7 transceiver](docs/images/rs485_uart7_transceiver.png)
+
+SIT3088E · `UART7_TX`/`UART7_RX` · `RS485_7_RW_EN` · bus **J7** (`RS485-A7`/`RS485-B7`). See [docs/BOARD_PINOUT.md](docs/BOARD_PINOUT.md).
+
+### Temperature & humidity (I2C FPC)
+
+![T/H sensor FPC connector](docs/images/aht20_i2c_fpc_connector.png)
+
+FPC **J9910** on `TP_SDA`/`TP_SCL` (AHT20 @ **0x38**). Shared I2C with touch / expander.
+
 ---
 
 ## Repository map

@@ -12,6 +12,8 @@ RGB / touch bring-up: `components/board_bsp/src/withthewind_board_lvgl_init.c`
 | NCA9555 expander | [images/nca9555_expander.png](images/nca9555_expander.png) |
 | LCD RGB565 connector | [images/lcd_rgb565_connector.png](images/lcd_rgb565_connector.png) |
 | UART / GPIO header | [images/uart_gpio_connector.png](images/uart_gpio_connector.png) |
+| RS485 (UART7 + auto DE) | [images/rs485_uart7_transceiver.png](images/rs485_uart7_transceiver.png) |
+| T/H sensor FPC (I2C) | [images/aht20_i2c_fpc_connector.png](images/aht20_i2c_fpc_connector.png) |
 
 ![MCU](images/mcu_esp32s3_pinout.png)
 
@@ -20,6 +22,35 @@ RGB / touch bring-up: `components/board_bsp/src/withthewind_board_lvgl_init.c`
 ![LCD connector](images/lcd_rgb565_connector.png)
 
 ![UART GPIO](images/uart_gpio_connector.png)
+
+### RS485 transceiver (UART7)
+
+SIT3088E half-duplex transceiver with optional auto direction control (`RS485_7_RW_EN`). Bus connector **J7** = `RS485-A7` / `RS485-B7`.
+
+![RS485 UART7](images/rs485_uart7_transceiver.png)
+
+| Net | Role |
+|-----|------|
+| `UART7_TX` / `UART7_RX` | MCU UART → DI / RO (22 Ω series) |
+| `RS485_7_RW_EN` | DE + /RE (active-high drive); pull-down 10 kΩ; can be driven by TX auto circuit (SN74LVC1G14) |
+| `RS485-A7` / `RS485-B7` | Differential bus via PTC + TVS to J7 |
+
+Firmware helpers: `main/app/app_rs485*` / `app_modbus_*` (do not block inside LVGL callbacks).
+
+### Temperature & humidity FPC (I2C)
+
+6-pin FPC **J9910** on shared `TP_SDA` / `TP_SCL` (same bus as GT911 / NCA9555). Silk mark **0x38** = typical AHT20 address.
+
+![AHT20 / T-H FPC](images/aht20_i2c_fpc_connector.png)
+
+| FPC pin | Net |
+|---------|-----|
+| 1–2 | VCC 3.3 V (from `MCU_VDD` via FB + C35/C36) |
+| 3 | SDA ← `TP_SDA` (22 Ω) |
+| 4 | SCL ← `TP_SCL` (22 Ω) |
+| 5–6 | GND |
+
+Driver / calib: `main/board/aht20.c`, `aht20_calib.h`.
 
 ## Display (firmware)
 
